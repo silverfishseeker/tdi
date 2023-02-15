@@ -3,19 +3,27 @@ import matplotlib.image as img
 import matplotlib.pyplot as plt
 from scipy import ndimage
 import cv2 as cv # pip install opencv-python
-# https://github.com/pvigier/perlin-numpy
 from perlin_numpy import generate_fractal_noise_2d # pip3 install git+https://github.com/pvigier/perlin-numpy
 
 def regionGrower(image, nregions, threshold, seed=random.random()):
 
   def judge(p1, p2):
-    x1, y1 = p1
-    x2, y2 = p2
     return abs(image[p1] - image[p2]) < threshold
 
   class Region():
+    def __init__(s, seed, value, freespace):
+      s.free = freespace # pixeles disponibles
+      s.val = value # identificador
+      s.place = []
+      s.border = []
+      s.seed = seed
+      if s.isfree(seed):
+        s.addPoint(seed)
+      else:
+        raise ValueError
+
     def isfree(s, point):
-      if point[0]<0 or point[1]<0:
+      if point[0]<0 or point[1]<0: # indeces negativos son válidos en python
         return False
       try:
         return s.free[point] == 0
@@ -23,21 +31,13 @@ def regionGrower(image, nregions, threshold, seed=random.random()):
         return False
 
     def addPoint(s, point):
+      s.place.append(point)
+      s.free[point] = s.val
       x, y = point
-      s.place.append((x,y))
       for i, j in [(-1,0),(1,0),(0,-1),(0,1)]:
         new = x+i, y+j
         if s.isfree(new) and judge((x,y), new):
           s.border.append(new)
-
-    def __init__(s, seed, value, freespace):
-      s.free = freespace
-      s.val = value
-      s.place = []
-      s.border = []
-      s.seed = seed
-      if s.isfree(seed):
-        s.addPoint(seed)
 
     def __str__(s):
       return str(s.val)+"|"+str(s.seed)
@@ -46,18 +46,17 @@ def regionGrower(image, nregions, threshold, seed=random.random()):
       while s.border:
         candidate = s.border.pop(int(random.random()*len(s.border)))
         if s.isfree(candidate):
-          s.addPoint(seed)
-          s.free[candidate] = s.val
+          s.addPoint(candidate)
           return True
       return False
 
   random.seed(seed)
   xlen, ylen = image.shape
 
-  freespace = np.zeros((xlen, ylen))
+  freespace = np.zeros((xlen, ylen),dtype=int) # píxeles sin escoger
   regions = []
   closed = []
-  freenumber = xlen*ylen
+  freenumber = xlen*ylen-nregions
 
   for i in range(nregions):
     while(True):
@@ -84,10 +83,10 @@ def regionGrower(image, nregions, threshold, seed=random.random()):
 
   return freespace * 256 / nregions
 
-testsDir = "tests"
 def generateMap(size, name):
+  name = os.path.join("tests",name)
   try:
-    os.mkdir(os.path.join(testsDir,name))
+    os.mkdir(name)
   except FileExistsError:
     pass
 
@@ -105,22 +104,16 @@ def generateMap(size, name):
   arr = arr **2
   img.imsave(f'{name}/1square.png', arr)
 
-  # mini, maxi = 0,0
-  # for k in arr:
-  #   for j in k:
-  #     if j < mini:
-  #       mini = j
-  #     if j > maxi:
-  #       maxi = j
-  # print(mini, maxi)
+  # _, arr = cv.threshold(arr, 0.04, 1, cv.THRESH_TOZERO)
+  # # arr, treshold, maxvalue, type
+  # img.imsave(f'{name}/2umbralizado.png', arr)
 
-  _, arr = cv.threshold(arr, 0.04, 1, cv.THRESH_TOZERO)
-  # arr, treshold, maxvalue, type
-  img.imsave(f'{name}/2umbralizado.png', arr)
+  # arr = ndimage.median_filter(arr, size=size//20)
+  # # arr, size
+  # img.imsave(f'{name}/3filtroMediana.png', arr)
 
-  arr = ndimage.median_filter(arr, size=size//20)
-  # arr, size
-  img.imsave(f'{name}/3filtroMediana.png', arr)
+  arr = regionGrower(arr,10,1)
+  img.imsave(f'{name}/4regionGrower.png', arr)
 
   print(name, "terminado")
 
