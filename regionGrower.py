@@ -1,6 +1,6 @@
 import random, numpy as np
 
-def regionGrower(image, nregions, threshold=1, thresholdGrowth=1.1, seed=random.random()):
+def regionGrower(image, nregions, threshold=1, thresholdGrowth=1.1):
 
   def judge(p1, p2):
     return abs(image[p1] - image[p2]) < threshold
@@ -45,7 +45,6 @@ def regionGrower(image, nregions, threshold=1, thresholdGrowth=1.1, seed=random.
           return True
       return False
 
-  random.seed(seed)
   xlen, ylen = image.shape
 
   freespace = np.zeros((xlen, ylen),dtype=int) # píxeles sin escoger

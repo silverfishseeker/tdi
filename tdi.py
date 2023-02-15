@@ -7,8 +7,10 @@ import cv2 as cv # pip install opencv-python
 from regionGrower import regionGrower
 from perlinNice import *
 
+testsFolder = "tests"
+
 def generateMap(size, name):
-  name = os.path.join("tests",name)
+  name = os.path.join(testsFolder,name)
   try:
     os.mkdir(name)
   except FileExistsError:
@@ -31,9 +33,12 @@ def generateMap(size, name):
   # img.imsave(f'{name}/3filtroMediana.png', arr)
 
   arr = regionGrower(arr,10,1)
-  img.imsave(f'{name}/4regionGrower.png', arr)
+  img.imsave(f'{name}/1regionGrower.png', arr)
 
   print(name, "terminado")
 
-for i in range(1):
+if not os.path.exists(testsFolder):
+    os.makedirs(testsFolder)
+
+for i in range(10):
   generateMap(1024, str(i))
