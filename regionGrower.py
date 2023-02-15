@@ -1,6 +1,6 @@
 import random, numpy as np
 
-def regionGrower(image, nregions, threshold, seed=random.random()):
+def regionGrower(image, nregions, threshold=1, thresholdGrowth=1.1, seed=random.random()):
 
   def judge(p1, p2):
     return abs(image[p1] - image[p2]) < threshold
@@ -67,7 +67,7 @@ def regionGrower(image, nregions, threshold, seed=random.random()):
     if len(regions) == 0:
       regions = closed
       closed = []
-      threshold*=1.1
+      threshold*=thresholdGrowth
 
     curr = regions.pop(0)
     if (curr.grow()):
