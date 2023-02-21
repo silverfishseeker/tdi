@@ -17,6 +17,8 @@ def regionGrower(image, nregions, threshold=0.1, thresholdGrowth=1.1):
       s.place = []
       s.border = []
       s.seed = seed
+      s.center = s.seed
+      s.size = 1
       if s.isfree(seed):
         s.addPoint(seed)
       else:
@@ -24,9 +26,6 @@ def regionGrower(image, nregions, threshold=0.1, thresholdGrowth=1.1):
 
     def isfree(s, point):
       return isFreePixel(s.free, point)
-
-    def judge(s,point):
-      return abs(int(image[seed]) - int(image[point])) < threshold
 
     def addPoint(s, point):
       s.place.append(point)
@@ -36,9 +35,15 @@ def regionGrower(image, nregions, threshold=0.1, thresholdGrowth=1.1):
         new = x+i, y+j
         if s.isfree(new):
           s.border.append(new)
+      #dintance
+      s.size +=1
+      s.center = (s.center[0]+point[0], s.center[1]+point[1])
 
-    def __str__(s):
-      return str(s.val)+"|"+str(s.seed)
+    def distance(s, point): # manhattan
+      return (abs(s.center[0] / s.size - point[0]) + abs(s.center[1] / s.size - point[1]))
+
+    def judge(s,point):
+      return abs(int(image[seed]) - int(image[point]))*s.distance(point) < threshold
 
     def grow(s):
       checkedBorder = []
