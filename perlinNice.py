@@ -23,15 +23,16 @@ def subPerlin(size, step): # genera una frecuencia de ruidete con valores en el 
                             )/step/step
     return mapa[:size,:size]
 
-def perlinNoise(size, stepsWeights):
+def perlinNoiseSteps(size, stepsWeights):
     """
     stepsWeights: lista de duplas de números. Cada dupla es: (número de steps, peso de esa frecuencia)
     """
     totalWeight = sum([x[1] for x in stepsWeights])
     return np.asarray([subPerlin(size, x[0])*(x[1]/totalWeight) for x in stepsWeights], dtype=float).sum(axis=0)
 
-def perlinNoiseFreq(size, stepsFreqs):
+def perlinNoise(size, freqssWeights):
     """
+    Valores en el rango [0,1)
     Igual que perlinNoise pero por fecuencias en vez de steps
     """
-    return perlinNoise(size, tuple((size//x[0], x[1]) for x in stepsFreqs)) 
+    return perlinNoiseSteps(size, tuple((size//x[0], x[1]) for x in freqssWeights)) 

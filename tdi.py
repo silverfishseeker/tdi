@@ -1,4 +1,4 @@
-import random, math, os, numpy as np
+import random, math, os, shutil, numpy as np
 import matplotlib.image as img
 import matplotlib.pyplot as plt
 from scipy import ndimage
@@ -12,29 +12,27 @@ testsFolder = "tests"
 def generateMap(size, name):
   name = os.path.join(testsFolder,name)
 
-  print(name, "start")
-
-  arr = perlinNoiseFreq(size, [(2,1),(6, 0.5), (20, 0.2)])
   #arr = perlinNoiseFreq(size, [(2,2),(5,1)])
+  arr = perlinNoise(size, [(2,1),(6, 0.5), (10, 0.2)])
+  arr = np.array(256*arr, dtype = 'uint8') #pasamos de [0,1) a [0,255]
   img.imsave(f'{name}_0perlinNoise.png', arr)
-  print("  perlin hecho")
 
-  # _, arr = cv.threshold(arr, 0.04, 1, cv.THRESH_TOZERO)
+  # _, arr = cv2.threshold(arr, 100, 256, cv2.THRESH_TOZERO)
   # # arr, treshold, maxvalue, type
-  # img.imsave(f'{name}/2umbralizado.png', arr)
+  # img.imsave(f'{name}_1umbralizado.png', arr)
 
-  arr = np.array(256*arr, dtype = 'uint8')
-  arr = cv2.medianBlur(arr, 3)
-  img.imsave(f'{name}_1filtroMediana.png', arr)
-  print("  mediana hecho")
-
-  arr = regionGrower(arr,10,threshold=20, thresholdGrowth=1.1)
+  arr = regionGrower(arr,10,threshold=1, thresholdGrowth=1.1)
   img.imsave(f'{name}_2regionGrower.png', arr)
 
-  print("  terminado")
+  medianSize = size//100
+  medianSize = medianSize+medianSize%2+1
+  arr = cv2.medianBlur(arr, medianSize)
+  img.imsave(f'{name}_3filtroMediana.png', arr)
 
-if not os.path.exists(testsFolder):
-    os.makedirs(testsFolder)
+  print(name,"terminado")
 
-for i in range(10):
-  generateMap(100, str(i))
+if __name__ == "__main__":
+  shutil.rmtree(testsFolder)
+  os.makedirs(testsFolder)
+  for i in range(10):
+    generateMap(200, str(i))

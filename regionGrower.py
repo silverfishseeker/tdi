@@ -66,7 +66,7 @@ def regionGrower(image, nregions, threshold=0.1, thresholdGrowth=1.1):
 
   xlen, ylen = image.shape
 
-  freespace = np.zeros((xlen, ylen),dtype=int) # píxeles sin escoger
+  freespace = np.zeros((xlen, ylen),dtype = 'uint8') # píxeles sin escoger
   regions = []
   freenumber = xlen*ylen-nregions
 
@@ -93,4 +93,4 @@ def regionGrower(image, nregions, threshold=0.1, thresholdGrowth=1.1):
     closed.append(curr)
     #print(freenumber, threshold, len(closed), curr.val)
 
-  return freespace * 256 / nregions
+  return freespace * (256 // nregions)
