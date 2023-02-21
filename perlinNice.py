@@ -27,10 +27,11 @@ def perlinNoise(size, stepsWeights):
     """
     stepsWeights: lista de duplas de números. Cada dupla es: (número de steps, peso de esa frecuencia)
     """
-    return np.asarray([subPerlin(size, x[0])*x[1] for x in stepsWeights], dtype=float).sum(axis=0)
+    totalWeight = sum([x[1] for x in stepsWeights])
+    return np.asarray([subPerlin(size, x[0])*(x[1]/totalWeight) for x in stepsWeights], dtype=float).sum(axis=0)
 
 def perlinNoiseFreq(size, stepsFreqs):
     """
     Igual que perlinNoise pero por fecuencias en vez de steps
     """
-    return perlinNoise(size, ((size//x[0], x[1]) for x in stepsFreqs)) 
+    return perlinNoise(size, tuple((size//x[0], x[1]) for x in stepsFreqs)) 
