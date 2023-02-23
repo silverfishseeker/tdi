@@ -1,6 +1,6 @@
 import random, numpy as np
 
-def regionGrower(image, nregions, threshold=0.1, thresholdGrowth=1.1):
+def regionGrower(image, nregions, threshold, thresholdGrowth=1.1):
 
   def isFreePixel(arr, point):
     if point[0]<0 or point[1]<0: # indeces negativos son válidos en python
@@ -43,7 +43,9 @@ def regionGrower(image, nregions, threshold=0.1, thresholdGrowth=1.1):
       return (abs(s.center[0] / s.size - point[0]) + abs(s.center[1] / s.size - point[1]))
 
     def judge(s,point):
+      #return image[point] < threshold
       return abs(int(image[seed]) - int(image[point]))*s.distance(point) < threshold
+    
 
     def grow(s):
       checkedBorder = []
@@ -93,4 +95,4 @@ def regionGrower(image, nregions, threshold=0.1, thresholdGrowth=1.1):
     closed.append(curr)
     #print(freenumber, threshold, len(closed), curr.val)
 
-  return freespace * (256 // nregions)
+  return freespace * (256 // (nregions+1))
