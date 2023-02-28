@@ -1,63 +1,80 @@
 import random, math, os, shutil, numpy as np
 import matplotlib.image as img
-import matplotlib.pyplot as plt
-from scipy import ndimage
 import cv2 # pip install opencv-python
 
 from regionGrower import regionGrower
 from perlinNice import *
 
 testsFolder = "tests"
+def generateMap(name, size, contryNumber, perlin, threshold, thresholdGrowth, seeLevel,decreaseFactor, minEarthSize, medianSize, seeMedianSize):
+  
+  class Img():
+    def __init__(s):
+      s.n=0
+    def print(s,arr, subName):
+      img.imsave(f'{name}_{s.n}{subName}.png', cv2.resize(arr, dsize=(2000, 2000), interpolation=cv2.INTER_NEAREST))
+      s.n+=1
+  im = Img()
 
-def generateMap(size, name, perlinContry, perlinSee, threshold, thresholdGrowth, seeLevel, medianSize, seeMedianSize):
   name = os.path.join(testsFolder,name)
 
-  #arr = perlinNoiseFreq(size, [(2,2),(5,1)])
-  perlin = perlinNoise(size, perlinContry)
-  perlin = np.array(256*perlin, dtype = 'uint8') #pasamos de [0,1) a [0,255]
-  img.imsave(f'{name}_0perlinNoise.png', perlin)
+  perlin = perlinNoise(size, perlin)*256
+  im.print(perlin, "perlinNoise")
 
-  arr = regionGrower(perlin,10,threshold, thresholdGrowth)
-  img.imsave(f'{name}_1regionGrower.png', arr)
+  # See
+  seeMedianSize = size//seeMedianSize
+  seeMedianSize = seeMedianSize+seeMedianSize%2+1 # tiene que ser impar
+  maxSee = size*size - int(size*size*minEarthSize)
+  currRange = 256
+  while True:
+    see = cv2.GaussianBlur(perlin.astype("uint8"), (seeMedianSize,seeMedianSize), cv2.BORDER_DEFAULT)
+    _, see = cv2.threshold(see, seeLevel, 255, cv2.THRESH_BINARY)
+    zeroPixels = size*size - cv2.countNonZero(see)
+    if zeroPixels < maxSee:
+      break
+    currRange*=decreaseFactor
+    perlin= perlin*decreaseFactor+256-currRange
+    im.print(see, "seeTry")
+  im.print(see, "seeGaussianYUmbralizado")
+
+  see = cv2.medianBlur(see, seeMedianSize)
+  im.print(see, "seeMediana")
+
+
+  arr = regionGrower(perlin, contryNumber, see, zeroPixels, threshold, thresholdGrowth)
+  im.print(arr, "regionGrower")
 
   medianSize = size//medianSize
   medianSize = medianSize+medianSize%2+1
   arr = cv2.medianBlur(arr, medianSize)
-  img.imsave(f'{name}_2filtroMediana.png', arr)
+  im.print(arr, "filtroMediana")
 
-
-  # see = perlinNoise(size, perlinSee)
-  # see = np.array(256*see, dtype = 'uint8') #pasamos de [0,1) a [0,255]
-  # img.imsave(f'{name}_5see.png', see)
-
-  
-  seeMedianSize = size//seeMedianSize
-  seeMedianSize = seeMedianSize+seeMedianSize%2+1
-
-  see = cv2.GaussianBlur(perlin, (seeMedianSize,seeMedianSize), cv2.BORDER_DEFAULT)
-  img.imsave(f'{name}_5seeGaussianBlur.png', see)
-
-  _, see = cv2.threshold(see, seeLevel, 256, cv2.THRESH_BINARY_INV)
-  img.imsave(f'{name}_6seeUmbralizado.png', see)
-
-  see = cv2.medianBlur(see, seeMedianSize)
-  img.imsave(f'{name}_7seeMediana.png', see)
-
-
-  arr = arr*see
-  img.imsave(f'{name}_8mareNostrum.png', arr)
   print(name,"terminado")
+  print()
 
 if __name__ == "__main__":
+
+
+  if os.path.exists("x"):
+    shutil.rmtree("x")
+  os.makedirs("x")
+
+
   if os.path.exists(testsFolder):
     shutil.rmtree(testsFolder)
   os.makedirs(testsFolder)
-  for i in range(10):
-    generateMap(200, str(i),
-      perlinContry=[(10, 1), (20, 0.2), (100, 0.2)],
-      perlinSee=[(2, 2), (5,1),(10, 1), (30, 0.05)],
+  for i in range(1000):
+    generateMap(str(i),
+      size=20,
+      contryNumber=3,
+      #perlin=[(2, 2), (5,1), (10, 1), (20, 0.2), (30, 0.1), (100, 0.2)],
+      perlin=[(2, 1)],
       threshold=1,
-      thresholdGrowth=1.1,
+      thresholdGrowth=1.5,
       seeLevel=130,
+      decreaseFactor=0.9,
+      minEarthSize=0.4, #si es muy bajo puede que no termine por no enconrar huecos libres para semillas
       medianSize=100,
       seeMedianSize=10)
+  
+  print("END")
