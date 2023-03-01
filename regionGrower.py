@@ -9,75 +9,102 @@ class Img():
     img.imsave(f'x/{Img.n}.png', arr)
     Img.n+=1
 
-def regionGrower(image, nregions, mask, zeroPixels, threshold, thresholdGrowth=1.1):
 
-  class Counter(): #para tener referencia a un número
-    def start(init):
-      Counter.n = init
+class Counter(): #para tener referencia a un número
+  def start(init):
+    Counter.n = init
+
     
-  def isFreePixel(arr, point):
+class Graph(set): # Undirected graph¡
+  def add(s, a, b):
+    set.add(s,(a,b))
+
+  def __contains__(s, key):
+    a,b = key
+    return set.__contains__(s,(a,b)) or set.__contains__(s,(b,a))
+
+  def remove(s, a, b):
+    try:
+      return set.remove(s,(b,a))
+    except KeyError:
+      return set.remove(s,(a,b)) # si no está ninguno lanzamos KeyError
+
+
+class Region():
+  def staticInit(image, lienzo, pixelsDict, mask, threshold, distanceFactor):
+    Region.image = image
+    Region.lienzo = lienzo # pixeles disponibles
+    Region.pixelsDict = pixelsDict
+    Region.mask = mask
+    Region.threshold = threshold
+    Region.distanceFactor = distanceFactor
+
+  def isfree(point):
     if point[0]<0 or point[1]<0: # indeces negativos son válidos en python
       return False
     try:
-      return mask[point] and arr[point] == 0
+      return Region.mask[point] and Region.lienzo[point] == 0
     except IndexError:
       return False
 
-  class Region():
-    def __init__(s, seed, value, freespace):
-      s.free = freespace # pixeles disponibles
-      s.val = value # identificador
-      s.border = []
-      s.seed = seed
-      s.center = s.seed
-      s.size = 0
-      if s.isfree(seed):
-        s.addPoint(seed)
-      else:
-        raise ValueError("el seed no está disponible")
+  def __init__(s, seed, value):
+    s.val = value # identificador
+    s.border = []
+    s.seed = seed
+    s.center = s.seed
+    s.size = 0
+    if Region.isfree(seed):
+      s.addPoint(seed)
+    else:
+      raise ValueError("el seed no está disponible")
 
-    def isfree(s, point):
-      return isFreePixel(s.free, point)
+  def addPoint(s, point):
+    Region.lienzo[point] = s.val
+    Region.pixelsDict[s.val] = point
+    Counter.n-=1
+    x, y = point
+    for i, j in [(-1,0),(1,0),(0,-1),(0,1)]:
+      new = x+i, y+j
+      if Region.isfree(new) and new not in s.border:
+        s.border.append(new)
 
-    def addPoint(s, point):
-      s.free[point] = s.val
-      Counter.n-=1
-      x, y = point
-      for i, j in [(-1,0),(1,0),(0,-1),(0,1)]:
-        new = x+i, y+j
-        if s.isfree(new) and new not in s.border:
-          s.border.append(new)
+    #dintance
+    s.size +=1
+    s.center = (s.center[0]+point[0], s.center[1]+point[1])
+    #Img.print(Region.free)
+    #img.imsave("xxx.png",cv2.resize((mask.astype("bool") & ~Region.free.astype("bool")).astype("uint8"), dsize=(2000, 2000), interpolation=cv2.INTER_NEAREST))
+  
+  def grow(s):
+    checkedBorder = []
+    while s.border:
+      # punto aleatorio en la frontera:
+      candidate = s.border.pop(int(random.random()*len(s.border)))
+      if Region.isfree(candidate):
+        # manhattan con el punto medio:
+        distance = abs(s.center[0] / s.size - candidate[0]) + abs(s.center[1] / s.size - candidate[1])
+        
+        #### NOS LA METEMOS O NO NOS LA METEMOS ####
+        # comparamos nivel de gris y multiplicamos por la distancia :
+        if abs(int(Region.image[s.seed]) - int(Region.image[candidate])) * Region.distanceFactor(distance) < Region.threshold:
+        #notita: cualquier operación que tenga que ver con Decimal, da un Decimal
+          s.addPoint(candidate)
+        else:
+          checkedBorder.append(candidate)
+    # guardamos los puntos que no han pasado el threshold para cuando este suba:
+    s.border = checkedBorder
+  
 
-      #dintance
-      s.size +=1
-      s.center = (s.center[0]+point[0], s.center[1]+point[1])
-      bar()
-      # Img.print(s.free)
-      # img.imsave("xxx.png",cv2.resize((mask.astype("bool") & ~s.free.astype("bool")).astype("uint8"), dsize=(2000, 2000), interpolation=cv2.INTER_NEAREST))
-    
-    def grow(s):
-      checkedBorder = []
-      while s.border:
-        # punto aleatorio en la frontera:
-        candidate = s.border.pop(int(random.random()*len(s.border)))
-        if s.isfree(candidate):
-          # manhattan con el punto medio:
-          distance = abs(s.center[0] / s.size - candidate[0]) + abs(s.center[1] / s.size - candidate[1])
-          # comparamos nivel de gris y multiplicamos por la distancia :
-          if abs(int(image[seed]) - int(image[candidate]))*distance < threshold:
-            s.addPoint(candidate)
-          else:
-            checkedBorder.append(candidate)
-      # guardamos los puntos que no han pasado el threshold para cuando este suba:
-      s.border = checkedBorder
-    
+def regionGrower(image, nregions, mask, zeroPixels, threshold, thresholdGrowth, distanceFactor):
   xlen, ylen = image.shape
-  freespace = np.zeros((xlen, ylen)) # píxeles sin escoger
+  lienzo = np.zeros((xlen, ylen)) # píxeles sin escoger
   Counter.start(xlen*ylen-zeroPixels)
   regions = []
   closed = []
   regionVal = 1
   actualNRegions = 0
+  prevCunterN = Counter.n # para la barra chula de progreso
+  pixelsDict = {}
+  Region.staticInit(image, lienzo, pixelsDict, mask, threshold, distanceFactor)
 
   # grow until the end
   with alive_bar(Counter.n) as bar:
@@ -86,15 +113,15 @@ def regionGrower(image, nregions, mask, zeroPixels, threshold, thresholdGrowth=1
         if closed:
           regions = closed
           closed = []
-          threshold*=thresholdGrowth
+          Region.threshold*=thresholdGrowth
         else:
           while regionVal < nregions+1 or not (regions or closed):
             loop = True
             while loop:
               seed = int(random.random()*xlen), int(random.random()*ylen)
-              if isFreePixel(freespace,seed):
+              if Region.isfree(seed):
                 loop = False
-                r = Region(seed, regionVal, freespace)
+                r = Region(seed, regionVal)
                 regions.append(r)
                 r.grow()
                 regionVal+=1
@@ -104,6 +131,9 @@ def regionGrower(image, nregions, mask, zeroPixels, threshold, thresholdGrowth=1
       curr.grow()
       if curr.border:
         closed.append(curr)
+
+      bar(prevCunterN-Counter.n)
+      prevCunterN = Counter.n
       #print(Counter.n, cv2.countNonZero(freespace), sum(x.size for x in discarded), threshold)
     
-  return (freespace * 256 / (actualNRegions+1)).astype("uint8")
+  return (lienzo * 256 / (actualNRegions+1)).astype("uint8")
