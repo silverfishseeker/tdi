@@ -65,16 +65,16 @@ if __name__ == "__main__":
   os.makedirs(testsFolder)
   for i in range(1000):
     generateMap(str(i),
-      size=20,
-      contryNumber=3,
-      #perlin=[(2, 2), (5,1), (10, 1), (20, 0.2), (30, 0.1), (100, 0.2)],
-      perlin=[(2, 1)],
-      threshold=1,
+      size=1000,
+      contryNumber=20,
+      perlin=[(2, 2), (5,1), (10, 1), (20, 0.2), (30, 0.1), (100, 0.2)],
+      #perlin=[(2, 1)],
+      threshold=60,
       thresholdGrowth=1.5,
       seeLevel=130,
       decreaseFactor=0.9,
       minEarthSize=0.4, #si es muy bajo puede que no termine por no enconrar huecos libres para semillas
-      medianSize=100,
-      seeMedianSize=10)
+      medianSize=200,
+      seeMedianSize=100)
   
   print("END")
