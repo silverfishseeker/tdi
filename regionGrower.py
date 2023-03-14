@@ -6,7 +6,7 @@ class Img():
   n=0
   def print(arr):
     arr = cv2.resize(arr, dsize=(1200, 1200), interpolation=cv2.INTER_NEAREST)
-    img.imsave(f'x/{Img.n}.png', arr)
+    img.imsave(f'{Img.stepsFolder}/{Img.n}.png', arr)
     Img.n+=1
 
 
@@ -31,13 +31,15 @@ class Graph(set): # Undirected graph¡
 
 
 class Region():
-  def staticInit(image, lienzo, pixelsDict, mask, threshold, distanceFactor):
+  def staticInit(image, lienzo, pixelsDict, mask, threshold, distanceFactor, thresholdGrowth, condition):
     Region.image = image
     Region.lienzo = lienzo # pixeles disponibles
     Region.pixelsDict = pixelsDict
     Region.mask = mask
     Region.threshold = threshold
     Region.distanceFactor = distanceFactor
+    Region.thresholdGrowth = thresholdGrowth
+    Region.condition = condition
 
   def isfree(point):
     if point[0]<0 or point[1]<0: # indeces negativos son válidos en python
@@ -76,35 +78,43 @@ class Region():
   
   def grow(s):
     checkedBorder = []
+    hasGrown = False
     while s.border:
       # punto aleatorio en la frontera:
       candidate = s.border.pop(int(random.random()*len(s.border)))
       if Region.isfree(candidate):
         # manhattan con el punto medio:
-        distance = abs(s.center[0] / s.size - candidate[0]) + abs(s.center[1] / s.size - candidate[1])
+        #distance = abs(s.center[0] / s.size - candidate[0]) + abs(s.center[1] / s.size - candidate[1])
+        distance = ((s.seed[0] - candidate[0])**2 + (s.seed[1] - candidate[1])**2)**0.5
+        #distance = ((s.center[0] / s.size - candidate[0])**2 + (s.center[1] / s.size - candidate[1])**2)**0.5
         
         #### NOS LA METEMOS O NO NOS LA METEMOS ####
         # comparamos nivel de gris y multiplicamos por la distancia :
-        if abs(int(Region.image[s.seed]) - int(Region.image[candidate])) * Region.distanceFactor(distance) < Region.threshold:
+        #if Region.image[candidate] + Region.distanceFactor(distance) < Region.threshold:
+        if Region.condition(Region.image[candidate],Region.distanceFactor(distance),Region.threshold):
         #notita: cualquier operación que tenga que ver con Decimal, da un Decimal
           s.addPoint(candidate)
+          hasGrown = True
         else:
           checkedBorder.append(candidate)
     # guardamos los puntos que no han pasado el threshold para cuando este suba:
     s.border = checkedBorder
+    if hasGrown:
+      Img.print(Region.lienzo)
   
 
-def regionGrower(image, nregions, mask, zeroPixels, threshold, thresholdGrowth, distanceFactor):
+def regionGrower(image, nregions, mask, zeroPixels, threshold, thresholdGrowth, distanceFactor,stepsFolder,maxSeedTries, condition):
   xlen, ylen = image.shape
   lienzo = np.zeros((xlen, ylen)) # píxeles sin escoger
   Counter.start(xlen*ylen-zeroPixels)
+  Img.stepsFolder = stepsFolder
   regions = []
   closed = []
   regionVal = 1
   actualNRegions = 0
   prevCunterN = Counter.n # para la barra chula de progreso
   pixelsDict = {}
-  Region.staticInit(image, lienzo, pixelsDict, mask, threshold, distanceFactor)
+  Region.staticInit(image, lienzo, pixelsDict, mask, threshold, distanceFactor,thresholdGrowth, condition)
 
   # grow until the end
   with alive_bar(Counter.n) as bar:
@@ -113,19 +123,20 @@ def regionGrower(image, nregions, mask, zeroPixels, threshold, thresholdGrowth, 
         if closed:
           regions = closed
           closed = []
-          Region.threshold*=thresholdGrowth
+          Region.threshold=Region.thresholdGrowth(Region.threshold)
         else:
           while regionVal < nregions+1 or not (regions or closed):
-            loop = True
-            while loop:
+            for _ in range(maxSeedTries):
               seed = int(random.random()*xlen), int(random.random()*ylen)
-              if Region.isfree(seed):
-                loop = False
+              if Region.isfree(seed) and Region.image[seed] < Region.threshold:
                 r = Region(seed, regionVal)
                 regions.append(r)
                 r.grow()
                 regionVal+=1
                 actualNRegions+=1
+                break
+            else:
+              Region.threshold=Region.thresholdGrowth(Region.threshold)
 
       curr = regions.pop()
       curr.grow()

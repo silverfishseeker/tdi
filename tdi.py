@@ -6,6 +6,7 @@ from perlinNice import perlinNoise
 #from decimal import * # me ha pasado un poco con el tamaño de los numbers
 
 testsFolder = "tests"
+stepsFolder = "steps"
 
 
 class Img():
@@ -16,33 +17,42 @@ class Img():
     img.imsave(f'{s.name}_{s.n}{subName}.png', cv2.resize(arr, dsize=(2000, 2000), interpolation=cv2.INTER_NEAREST))
     s.n+=1
 
-def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, thresholdGrowth, distanceFactor, seeLevel,decreaseFactor, minEarthSize, medianSize, seeMedianSize):
+def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, thresholdGrowth, distanceFactor, seeLevel,decreaseFactor, minEarthSize, medianSize, maxSeedTries, condition):
   
   im = Img(os.path.join(testsFolder,name))
 
-  print(name, "comienza")
-  seeperlin = perlinNoise(size, perlinSee)*256
-  im.print(seeperlin, "perlinSee")
+  medianSize = size//medianSize
+  medianSize = medianSize+medianSize%2+1 # tiene que ser impar
 
   # See
-  seeMedianSize = size//seeMedianSize
-  seeMedianSize = seeMedianSize+seeMedianSize%2+1 # tiene que ser impar
-  maxSee = size*size - int(size*size*minEarthSize)
-  currRange = 256
+  print(name, "comienza")
+  seePerlin = (perlinNoise(size, perlinSee)*256).astype("uint8")
+  im.print(seePerlin, "perlinSee")
+
+  minSee = size*size - int(size*size*minEarthSize)
   while True: # bajamos el agua hasta que haya suficiente tierra
-    see = cv2.GaussianBlur(seeperlin.astype("uint8"), (seeMedianSize,seeMedianSize), cv2.BORDER_DEFAULT)
-    _, see = cv2.threshold(see, seeLevel, 255, cv2.THRESH_BINARY)
-    if size*size - cv2.countNonZero(see) < maxSee:
+    #see = cv2.GaussianBlur(seeperlin.astype("uint8"), (seeMedianSize,seeMedianSize), cv2.BORDER_DEFAULT)
+    _, see = cv2.threshold(seePerlin, seeLevel, 255, cv2.THRESH_BINARY)
+    if size*size - cv2.countNonZero(see) < minSee:
       break
-    newRange = currRange*decreaseFactor # tontería
-    seeperlin= seeperlin*decreaseFactor+currRange-newRange
-    currRange=newRange
+    seeLevel*=decreaseFactor
     im.print(see, "seeTry")
 
-  im.print(see, "seeGaussianYUmbralizado")
+  im.print(see, "seeUmbralizado")
 
-  see = cv2.medianBlur(see, seeMedianSize)
-  im.print(see, "seeMediana")
+  # see = cv2.medianBlur(see, seeMedianSize)
+  # im.print(see, "seeMediana")
+  
+  kernel = np.ones((medianSize, medianSize), np.uint8)
+  radius = medianSize//2
+  for i in range(medianSize):
+    for j in range(medianSize):
+      if ((i-radius)**2+(j-radius)**2)**0.5 > radius:
+        kernel[i,j] = 0
+  im.print(kernel, "kernel")
+
+  see = cv2.erode(see, kernel, iterations=1)
+  im.print(see, "seeErode")
 
   zeroPixels = size*size - cv2.countNonZero(see) #refactorizar
 
@@ -50,13 +60,18 @@ def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, t
   arr = perlinNoise(size, perlinRegions)*256
   im.print(arr, "perlinNoise")
 
-  arr = regionGrower(arr, contryNumber, see, zeroPixels, threshold, thresholdGrowth, distanceFactor)
+  arr = regionGrower(arr, contryNumber, see, zeroPixels, threshold, thresholdGrowth, distanceFactor,stepsFolder,maxSeedTries, condition)
   im.print(arr, "regionGrower")
 
-  medianSize = size//medianSize
-  medianSize = medianSize+medianSize%2+1
-  arr = cv2.medianBlur(arr, medianSize)
-  im.print(arr, "filtroMediana")
+  # arr = cv2.medianBlur(arr, medianSize)
+  # im.print(arr, "filtroMediana")
+
+  
+  # kernel = np.ones((medianSize, medianSize), np.uint8)
+  # img_erosion = cv2.erode(arr, kernel, iterations=1)
+  # im.print(img_erosion, "erode")
+  # img_dilation = cv2.dilate(arr, kernel, iterations=1)
+  # im.print(img_dilation, "dilate")
 
   print(name,"terminado")
   print()
@@ -64,28 +79,30 @@ def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, t
 if __name__ == "__main__":
 
 
-  if os.path.exists("x"):
-    shutil.rmtree("x")
-  os.makedirs("x")
+  if os.path.exists(stepsFolder):
+    shutil.rmtree(stepsFolder)
+  os.makedirs(stepsFolder)
 
 
   if os.path.exists(testsFolder):
     shutil.rmtree(testsFolder)
   os.makedirs(testsFolder)
-  for i in range(1000):
+  for i in range(1):
     generateMap(str(i),
-      size=1000,
-      contryNumber=20,
-      perlinRegions=[(2, 0.2), (5,0.2), (10, 0.5), (20, 1), (30, 1), (100, 0.1)],
-      perlinSee=[(2, 2), (5,1), (10, 1), (20, 0.5), (30, 0.1), (100, 0.1)],
-      #perlin=[(2, 1)],
+      size=128,
+      contryNumber=20000,
+      #perlinRegions=[(2, 0.5), (5,0.1), (10, 2), (20, 1), (30, 0.5), (100, 0.5)],
+      perlinRegions=[(10, 1), (20, 0.5), (30, 0.1),(100, 0.05)],
+      perlinSee=[(2, 2), (5,1), (20, 0.5), (100, 0.05)],
       threshold=100,
-      thresholdGrowth=1.5,
-      distanceFactor = lambda x: x**2,
+      thresholdGrowth = lambda x: x+10,
+      distanceFactor = lambda x: 0,#2**(x*0.05)*0.01,
+      condition = lambda candidate, distance, threshold: candidate + distance < threshold,
       seeLevel=130,
       decreaseFactor=0.9, # en el rango (0,1)
       minEarthSize=0.4, #si es muy bajo puede que no termine por no enconrar huecos libres para semillas
       medianSize=100, # dividir la imagen en este número de partes para calcular el tamaño de la mediana
-      seeMedianSize=50)
+      #seeMedianSize=50,
+      maxSeedTries=100)
   
   print("END")
