@@ -71,8 +71,8 @@ class Region():
     #dintance
     s.size +=1
     s.center = (s.center[0]+point[0], s.center[1]+point[1])
-    #Img.print(Region.free)
-    #img.imsave("xxx.png",cv2.resize((mask.astype("bool") & ~Region.free.astype("bool")).astype("uint8"), dsize=(2000, 2000), interpolation=cv2.INTER_NEAREST))
+    #Img.print(Region.lienzo)
+    #img.imsave("xxx.png",cv2.resize((Region.mask.astype("bool") & ~Region.free.astype("bool")).astype("uint8"), dsize=(2000, 2000), interpolation=cv2.INTER_NEAREST))
   
   def grow(s):
     checkedBorder = []

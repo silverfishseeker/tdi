@@ -1,0 +1,6 @@
+Probar erode y dilate
+    tamaños y formas de las máscaras
+
+Mirar crecimiento echando agua
+
+cambiar thrshold mar por bajar el valor

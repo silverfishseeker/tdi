@@ -32,10 +32,9 @@ def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, t
   while True: # bajamos el agua hasta que haya suficiente tierra
     see = cv2.GaussianBlur(seeperlin.astype("uint8"), (seeMedianSize,seeMedianSize), cv2.BORDER_DEFAULT)
     _, see = cv2.threshold(see, seeLevel, 255, cv2.THRESH_BINARY)
-    zeroPixels = size*size - cv2.countNonZero(see)
-    if zeroPixels < maxSee:
+    if size*size - cv2.countNonZero(see) < maxSee:
       break
-    newRange = currRange*decreaseFactor
+    newRange = currRange*decreaseFactor # tontería
     seeperlin= seeperlin*decreaseFactor+currRange-newRange
     currRange=newRange
     im.print(see, "seeTry")
@@ -44,6 +43,8 @@ def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, t
 
   see = cv2.medianBlur(see, seeMedianSize)
   im.print(see, "seeMediana")
+
+  zeroPixels = size*size - cv2.countNonZero(see) #refactorizar
 
   # regions
   arr = perlinNoise(size, perlinRegions)*256
