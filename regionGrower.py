@@ -31,7 +31,7 @@ class Graph(set): # Undirected graph¡
 
 
 class Region():
-  def staticInit(image, lienzo, pixelsDict, mask, threshold, distanceFactor, thresholdGrowth, condition):
+  def staticInit(image, lienzo, pixelsDict, mask, threshold, distanceFactor, thresholdGrowth, condition, isPrint):
     Region.image = image
     Region.lienzo = lienzo # pixeles disponibles
     Region.pixelsDict = pixelsDict
@@ -40,6 +40,7 @@ class Region():
     Region.distanceFactor = distanceFactor
     Region.thresholdGrowth = thresholdGrowth
     Region.condition = condition
+    Region.isPrint = isPrint
 
   def isfree(point):
     if point[0]<0 or point[1]<0: # indeces negativos son válidos en python
@@ -99,11 +100,11 @@ class Region():
           checkedBorder.append(candidate)
     # guardamos los puntos que no han pasado el threshold para cuando este suba:
     s.border = checkedBorder
-    if hasGrown:
+    if Region.isPrint and hasGrown:
       Img.print(Region.lienzo)
   
 
-def regionGrower(image, nregions, mask, zeroPixels, threshold, thresholdGrowth, distanceFactor,stepsFolder,maxSeedTries, condition):
+def regionGrower(image, nregions, mask, zeroPixels, threshold, thresholdGrowth, distanceFactor,stepsFolder,maxSeedTries, condition, isPrint):
   xlen, ylen = image.shape
   lienzo = np.zeros((xlen, ylen)) # píxeles sin escoger
   Counter.start(xlen*ylen-zeroPixels)
@@ -114,7 +115,7 @@ def regionGrower(image, nregions, mask, zeroPixels, threshold, thresholdGrowth, 
   actualNRegions = 0
   prevCunterN = Counter.n # para la barra chula de progreso
   pixelsDict = {}
-  Region.staticInit(image, lienzo, pixelsDict, mask, threshold, distanceFactor,thresholdGrowth, condition)
+  Region.staticInit(image, lienzo, pixelsDict, mask, threshold, distanceFactor,thresholdGrowth, condition, isPrint)
 
   # grow until the end
   with alive_bar(Counter.n) as bar:

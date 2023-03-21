@@ -7,6 +7,7 @@ from perlinNice import perlinNoise
 
 testsFolder = "tests"
 stepsFolder = "steps"
+finalFolder = "results"
 
 
 class Img():
@@ -17,9 +18,10 @@ class Img():
     img.imsave(f'{s.name}_{s.n}{subName}.png', cv2.resize(arr, dsize=(2000, 2000), interpolation=cv2.INTER_NEAREST))
     s.n+=1
 
-def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, thresholdGrowth, distanceFactor, seeLevel,decreaseFactor, minEarthSize, medianSize, maxSeedTries, condition):
+def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, thresholdGrowth, distanceFactor, seeLevel,decreaseFactor, minEarthSize, medianSize, maxSeedTries, condition, isPrint):
   
   im = Img(os.path.join(testsFolder,name))
+  imFinal = Img(os.path.join(finalFolder,name))
 
   medianSize = size//medianSize
   medianSize = medianSize+medianSize%2+1 # tiene que ser impar
@@ -40,27 +42,27 @@ def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, t
 
   im.print(see, "seeUmbralizado")
 
-  # see = cv2.medianBlur(see, seeMedianSize)
-  # im.print(see, "seeMediana")
+  see = cv2.medianBlur(see, medianSize)
+  im.print(see, "seeMediana")
   
-  kernel = np.ones((medianSize, medianSize), np.uint8)
-  radius = medianSize//2
-  for i in range(medianSize):
-    for j in range(medianSize):
-      if ((i-radius)**2+(j-radius)**2)**0.5 > radius:
-        kernel[i,j] = 0
-  im.print(kernel, "kernel")
+  # kernel = np.ones((medianSize, medianSize), np.uint8)
+  # radius = medianSize//2
+  # for i in range(medianSize):
+  #   for j in range(medianSize):
+  #     if ((i-radius)**2+(j-radius)**2)**0.5 > radius:
+  #       kernel[i,j] = 0
+  # im.print(kernel, "kernel")
 
-  see = cv2.erode(see, kernel, iterations=1)
-  im.print(see, "seeErode")
+  # see = cv2.erode(see, kernel, iterations=1)
+  # im.print(see, "seeErode")
 
   zeroPixels = size*size - cv2.countNonZero(see) #refactorizar
 
   # regions
-  arr = perlinNoise(size, perlinRegions)*256
+  arr = ((np.absolute(perlinNoise(size, perlinRegions) - 0.5) * (-1) + 0.5) * 256*2).astype("uint8")
   im.print(arr, "perlinNoise")
 
-  arr = regionGrower(arr, contryNumber, see, zeroPixels, threshold, thresholdGrowth, distanceFactor,stepsFolder,maxSeedTries, condition)
+  arr = regionGrower(arr, contryNumber, see, zeroPixels, threshold, thresholdGrowth, distanceFactor,stepsFolder,maxSeedTries, condition, isPrint)
   im.print(arr, "regionGrower")
 
   # arr = cv2.medianBlur(arr, medianSize)
@@ -73,36 +75,37 @@ def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, t
   # img_dilation = cv2.dilate(arr, kernel, iterations=1)
   # im.print(img_dilation, "dilate")
 
+  imFinal.print(arr, "")
   print(name,"terminado")
   print()
 
+def prepareFolder(name):
+  if os.path.exists(name):
+    shutil.rmtree(name)
+  os.makedirs(name)
+
 if __name__ == "__main__":
 
+  prepareFolder(stepsFolder)
+  prepareFolder(testsFolder)
+  prepareFolder(finalFolder)
 
-  if os.path.exists(stepsFolder):
-    shutil.rmtree(stepsFolder)
-  os.makedirs(stepsFolder)
-
-
-  if os.path.exists(testsFolder):
-    shutil.rmtree(testsFolder)
-  os.makedirs(testsFolder)
-  for i in range(1):
+  for i in range(100):
     generateMap(str(i),
-      size=128,
-      contryNumber=20000,
-      #perlinRegions=[(2, 0.5), (5,0.1), (10, 2), (20, 1), (30, 0.5), (100, 0.5)],
-      perlinRegions=[(10, 1), (20, 0.5), (30, 0.1),(100, 0.05)],
+      size=400,
+      contryNumber=20,
+      perlinRegions=[(6, 1), (10, 1), (20, 0.5),(100, 0.1)],
       perlinSee=[(2, 2), (5,1), (20, 0.5), (100, 0.05)],
-      threshold=100,
-      thresholdGrowth = lambda x: x+10,
-      distanceFactor = lambda x: 0,#2**(x*0.05)*0.01,
+      threshold=180,
+      thresholdGrowth = lambda x: x*1.01,
+      distanceFactor = lambda x: 2**(x*0.01)*0.01,
       condition = lambda candidate, distance, threshold: candidate + distance < threshold,
       seeLevel=130,
       decreaseFactor=0.9, # en el rango (0,1)
       minEarthSize=0.4, #si es muy bajo puede que no termine por no enconrar huecos libres para semillas
       medianSize=100, # dividir la imagen en este número de partes para calcular el tamaño de la mediana
       #seeMedianSize=50,
-      maxSeedTries=100)
+      maxSeedTries=100,
+      isPrint = False)
   
   print("END")
