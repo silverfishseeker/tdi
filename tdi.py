@@ -18,13 +18,16 @@ class Img():
     img.imsave(f'{s.name}_{s.n}{subName}.png', cv2.resize(arr, dsize=(2000, 2000), interpolation=cv2.INTER_NEAREST))
     s.n+=1
 
-def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, thresholdGrowth, distanceFactor, seeLevel,decreaseFactor, minEarthSize, medianSize, maxSeedTries, condition, isPrint):
+def calculateKerneSize(size, kernelSize):
+  kernelSize = size // kernelSize
+  return kernelSize+kernelSize%2+1 # tiene que ser impar
+
+def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, thresholdGrowth, distanceFactor, seeLevel,decreaseFactor, minEarthSize, medianSize, seeMedianSize, maxSeedTries, condition, isPrint):
   
   im = Img(os.path.join(testsFolder,name))
   imFinal = Img(os.path.join(finalFolder,name))
 
-  medianSize = size//medianSize
-  medianSize = medianSize+medianSize%2+1 # tiene que ser impar
+  seeMedianSize = calculateKerneSize(size,seeMedianSize)
 
   # See
   print(name, "comienza")
@@ -42,13 +45,13 @@ def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, t
 
   im.print(see, "seeUmbralizado")
 
-  see = cv2.medianBlur(see, medianSize)
+  see = cv2.medianBlur(see, seeMedianSize)
   im.print(see, "seeMediana")
   
-  # kernel = np.ones((medianSize, medianSize), np.uint8)
-  # radius = medianSize//2
-  # for i in range(medianSize):
-  #   for j in range(medianSize):
+  # kernel = np.ones((seeMedianSize, seeMedianSize), np.uint8)
+  # radius = seeMedianSize//2
+  # for i in range(seeMedianSize):
+  #   for j in range(seeMedianSize):
   #     if ((i-radius)**2+(j-radius)**2)**0.5 > radius:
   #       kernel[i,j] = 0
   # im.print(kernel, "kernel")
@@ -65,6 +68,7 @@ def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, t
   arr = regionGrower(arr, contryNumber, see, zeroPixels, threshold, thresholdGrowth, distanceFactor,stepsFolder,maxSeedTries, condition, isPrint)
   im.print(arr, "regionGrower")
 
+  # medianSize = calculateKerneSize(size, medianSize)
   # arr = cv2.medianBlur(arr, medianSize)
   # im.print(arr, "filtroMediana")
 
@@ -92,8 +96,8 @@ if __name__ == "__main__":
 
   for i in range(100):
     generateMap(str(i),
-      size=400,
-      contryNumber=20,
+      size=500,
+      contryNumber=10,
       perlinRegions=[(6, 1), (10, 1), (20, 0.5),(100, 0.1)],
       perlinSee=[(2, 2), (5,1), (20, 0.5), (100, 0.05)],
       threshold=180,
@@ -103,8 +107,8 @@ if __name__ == "__main__":
       seeLevel=130,
       decreaseFactor=0.9, # en el rango (0,1)
       minEarthSize=0.4, #si es muy bajo puede que no termine por no enconrar huecos libres para semillas
-      medianSize=100, # dividir la imagen en este número de partes para calcular el tamaño de la mediana
-      #seeMedianSize=50,
+      medianSize=200, # dividir la imagen en este número de partes para calcular el tamaño de la mediana
+      seeMedianSize=100,
       maxSeedTries=100,
       isPrint = False)
   
