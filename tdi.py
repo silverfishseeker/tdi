@@ -22,44 +22,27 @@ def calculateKerneSize(size, kernelSize):
   kernelSize = size // kernelSize
   return kernelSize+kernelSize%2+1 # tiene que ser impar
 
-def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, thresholdGrowth, distanceFactor, seeLevel,decreaseFactor, minEarthSize, medianSize, seeMedianSize, maxSeedTries, condition, isPrint):
+def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, thresholdGrowth, distanceFactor, seeLevel, maxIslands, seeMedianSize, minEarthSize, maxSeedTries, condition, isPrint):
   
   im = Img(os.path.join(testsFolder,name))
   imFinal = Img(os.path.join(finalFolder,name))
-
-  seeMedianSize = calculateKerneSize(size,seeMedianSize)
 
   # See
   print(name, "comienza")
   seePerlin = (perlinNoise(size, perlinSee)*256).astype("uint8")
   im.print(seePerlin, "perlinSee")
 
-  minSee = size*size - int(size*size*minEarthSize)
-  while True: # bajamos el agua hasta que haya suficiente tierra
-    #see = cv2.GaussianBlur(seeperlin.astype("uint8"), (seeMedianSize,seeMedianSize), cv2.BORDER_DEFAULT)
-    _, see = cv2.threshold(seePerlin, seeLevel, 255, cv2.THRESH_BINARY)
-    if size*size - cv2.countNonZero(see) < minSee:
-      break
-    seeLevel*=decreaseFactor
-    im.print(see, "seeTry")
+  see = regionGrower(seePerlin, maxIslands, np.ones((size,size)), int(size*size*(1-minEarthSize)), seeLevel, thresholdGrowth, distanceFactor,stepsFolder,maxSeedTries, condition, isPrint)
+  see = see.astype("bool").astype("uint8") # convertir a array "booleano"
+  im.print(see, "boolsee")
 
-  im.print(see, "seeUmbralizado")
-
+  seeMedianSize = calculateKerneSize(size, seeMedianSize)
   see = cv2.medianBlur(see, seeMedianSize)
-  im.print(see, "seeMediana")
-  
-  # kernel = np.ones((seeMedianSize, seeMedianSize), np.uint8)
-  # radius = seeMedianSize//2
-  # for i in range(seeMedianSize):
-  #   for j in range(seeMedianSize):
-  #     if ((i-radius)**2+(j-radius)**2)**0.5 > radius:
-  #       kernel[i,j] = 0
-  # im.print(kernel, "kernel")
-
-  # see = cv2.erode(see, kernel, iterations=1)
-  # im.print(see, "seeErode")
+  im.print(see, "medianSee")
 
   zeroPixels = size*size - cv2.countNonZero(see) #refactorizar
+
+
 
   # regions
   arr = ((np.absolute(perlinNoise(size, perlinRegions) - 0.5) * (-1) + 0.5) * 256*2).astype("uint8")
@@ -67,17 +50,6 @@ def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, t
 
   arr = regionGrower(arr, contryNumber, see, zeroPixels, threshold, thresholdGrowth, distanceFactor,stepsFolder,maxSeedTries, condition, isPrint)
   im.print(arr, "regionGrower")
-
-  # medianSize = calculateKerneSize(size, medianSize)
-  # arr = cv2.medianBlur(arr, medianSize)
-  # im.print(arr, "filtroMediana")
-
-  
-  # kernel = np.ones((medianSize, medianSize), np.uint8)
-  # img_erosion = cv2.erode(arr, kernel, iterations=1)
-  # im.print(img_erosion, "erode")
-  # img_dilation = cv2.dilate(arr, kernel, iterations=1)
-  # im.print(img_dilation, "dilate")
 
   imFinal.print(arr, "")
   print(name,"terminado")
@@ -96,19 +68,19 @@ if __name__ == "__main__":
 
   for i in range(100):
     generateMap(str(i),
-      size=500,
-      contryNumber=10,
+      size=400,
+      contryNumber=20,
       perlinRegions=[(6, 1), (10, 1), (20, 0.5),(100, 0.1)],
-      perlinSee=[(2, 2), (5,1), (20, 0.5), (100, 0.05)],
+      perlinSee=[(2,10),(3,10),(10, 2), (20, 2), (40, 1), (100, 0.5)],
+      #perlinSee=[(2, 2), (5,1), (20, 0.5), (100, 0.05)],
       threshold=180,
       thresholdGrowth = lambda x: x*1.01,
       distanceFactor = lambda x: 2**(x*0.01)*0.01,
       condition = lambda candidate, distance, threshold: candidate + distance < threshold,
-      seeLevel=130,
-      decreaseFactor=0.9, # en el rango (0,1)
-      minEarthSize=0.4, #si es muy bajo puede que no termine por no enconrar huecos libres para semillas
-      medianSize=200, # dividir la imagen en este número de partes para calcular el tamaño de la mediana
-      seeMedianSize=100,
+      seeLevel=10,
+      maxIslands=4,
+      seeMedianSize=200, # dividir la imagen en este número de partes para calcular el tamaño de la mediana
+      minEarthSize=0.2, #si es muy bajo puede que no termine por no enconrar huecos libres para semillas
       maxSeedTries=100,
       isPrint = False)
   
