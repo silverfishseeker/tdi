@@ -1,5 +1,6 @@
 import random, numpy as np
 import matplotlib.image as img, cv2
+import bisect
 from alive_progress import alive_bar
 
 class Img():
@@ -14,24 +15,9 @@ class Counter(): #para tener referencia a un número
   def start(init):
     Counter.n = init
 
-    
-class Graph(set): # Undirected graph¡
-  def add(s, a, b):
-    set.add(s,(a,b))
-
-  def __contains__(s, key):
-    a,b = key
-    return set.__contains__(s,(a,b)) or set.__contains__(s,(b,a))
-
-  def remove(s, a, b):
-    try:
-      return set.remove(s,(b,a))
-    except KeyError:
-      return set.remove(s,(a,b)) # si no está ninguno lanzamos KeyError
-
 
 class Region():
-  def staticInit(image, lienzo, pixelsDict, mask, threshold, distanceFactor, thresholdGrowth, condition, isPrint):
+  def staticInit(image, lienzo, pixelsDict, mask, threshold, distanceFactor, thresholdGrowth, condition, randomDistr, isPrint):
     Region.image = image
     Region.lienzo = lienzo # pixeles disponibles
     Region.pixelsDict = pixelsDict
@@ -40,6 +26,7 @@ class Region():
     Region.distanceFactor = distanceFactor
     Region.thresholdGrowth = thresholdGrowth
     Region.condition = condition
+    Region.randomDistr = randomDistr
     Region.isPrint = isPrint
 
   def isfree(point):
@@ -57,54 +44,58 @@ class Region():
     s.center = s.seed
     s.size = 0
     if Region.isfree(seed):
-      s.addPoint(seed)
+      s.addPoint(0,seed)
     else:
       raise ValueError("el seed no está disponible")
 
-  def addPoint(s, point):
+  def __lt__(s, other):
+    return type(other) is Region and s.size < other.size
+  
+  # def __eq__(s, other):
+  #   return type(other) is Region and s.size == other.size
+  
+  def addPoint(s, dist, point):
     Region.lienzo[point] = s.val
     Region.pixelsDict[s.val] = point
     Counter.n-=1
     x, y = point
     for i, j in [(-1,0),(1,0),(0,-1),(0,1)]:
       new = x+i, y+j
-      if Region.isfree(new) and new not in s.border:
-        s.border.append(new)
+      if Region.isfree(new):
+        bisect.insort(s.border, (dist+1, new))
+
+    #Img.print(Region.lienzo)
 
     #dintance
     s.size +=1
     s.center = (s.center[0]+point[0], s.center[1]+point[1])
-    #Img.print(Region.lienzo)
-    #img.imsave("xxx.png",cv2.resize((Region.mask.astype("bool") & ~Region.free.astype("bool")).astype("uint8"), dsize=(2000, 2000), interpolation=cv2.INTER_NEAREST))
   
   def grow(s):
     checkedBorder = []
     hasGrown = False
     while s.border:
       # punto aleatorio en la frontera:
-      candidate = s.border.pop(int(random.random()*len(s.border)))
+      dist, candidate = s.border.pop(
+        int(Region.randomDistr(random.random()) * len(s.border))
+      )
+
       if Region.isfree(candidate):
-        # manhattan con el punto medio:
-        #distance = abs(s.center[0] / s.size - candidate[0]) + abs(s.center[1] / s.size - candidate[1])
-        distance = ((s.seed[0] - candidate[0])**2 + (s.seed[1] - candidate[1])**2)**0.5
-        #distance = ((s.center[0] / s.size - candidate[0])**2 + (s.center[1] / s.size - candidate[1])**2)**0.5
         
         #### NOS LA METEMOS O NO NOS LA METEMOS ####
-        # comparamos nivel de gris y multiplicamos por la distancia :
-        #if Region.image[candidate] + Region.distanceFactor(distance) < Region.threshold:
-        if Region.condition(Region.image[candidate],Region.distanceFactor(distance),Region.threshold):
-        #notita: cualquier operación que tenga que ver con Decimal, da un Decimal
-          s.addPoint(candidate)
+        if Region.condition(Region.image[candidate], Region.distanceFactor(dist), Region.threshold):
+          s.addPoint(dist, candidate)
           hasGrown = True
         else:
-          checkedBorder.append(candidate)
+          bisect.insort(checkedBorder, (dist, candidate))
+
     # guardamos los puntos que no han pasado el threshold para cuando este suba:
     s.border = checkedBorder
+
     if Region.isPrint and hasGrown:
       Img.print(Region.lienzo)
   
 
-def regionGrower(image, nregions, mask, zeroPixels, threshold, thresholdGrowth, distanceFactor,stepsFolder,maxSeedTries, condition, isPrint):
+def regionGrower(image, nregions, mask, zeroPixels, threshold, thresholdGrowth, distanceFactor,stepsFolder,maxSeedTries, condition, randomDistr,isPrint):
   xlen, ylen = image.shape
   lienzo = np.zeros((xlen, ylen)) # píxeles sin escoger
   Counter.start(xlen*ylen-zeroPixels)
@@ -115,7 +106,7 @@ def regionGrower(image, nregions, mask, zeroPixels, threshold, thresholdGrowth, 
   actualNRegions = 0
   prevCunterN = Counter.n # para la barra chula de progreso
   pixelsDict = {}
-  Region.staticInit(image, lienzo, pixelsDict, mask, threshold, distanceFactor,thresholdGrowth, condition, isPrint)
+  Region.staticInit(image, lienzo, pixelsDict, mask, threshold, distanceFactor,thresholdGrowth, condition, randomDistr, isPrint)
 
   # grow until the end
   with alive_bar(Counter.n) as bar:
