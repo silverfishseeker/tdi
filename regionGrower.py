@@ -17,16 +17,18 @@ class Counter(): #para tener referencia a un número
 
 
 class Region():
-  def staticInit(image, lienzo, pixelsDict, mask, threshold, distanceFactor, thresholdGrowth, condition, randomDistr, isPrint):
+  def staticInit(image, lienzo, pixelsDict, mask, threshold, seedThreshold,distanceFactor, thresholdGrowth, condition, minSize, isPrint):
     Region.image = image
     Region.lienzo = lienzo # pixeles disponibles
     Region.pixelsDict = pixelsDict
     Region.mask = mask
     Region.threshold = threshold
+    Region.seedThreshold = seedThreshold
     Region.distanceFactor = distanceFactor
     Region.thresholdGrowth = thresholdGrowth
     Region.condition = condition
-    Region.randomDistr = randomDistr
+    Region.minSize = int(lienzo.shape[0] * lienzo.shape[1] * minSize)
+    print(minSize,Region.minSize)
     Region.isPrint = isPrint
 
   def isfree(point):
@@ -41,7 +43,6 @@ class Region():
     s.val = value # identificador
     s.border = []
     s.seed = seed
-    s.center = s.seed
     s.size = 0
     if Region.isfree(seed):
       s.addPoint(0,seed)
@@ -49,10 +50,10 @@ class Region():
       raise ValueError("el seed no está disponible")
 
   def __lt__(s, other):
-    return type(other) is Region and s.size < other.size
+    if not type(other) is Region:
+      raise TypeError
+    return s.size < other.size
   
-  # def __eq__(s, other):
-  #   return type(other) is Region and s.size == other.size
   
   def addPoint(s, dist, point):
     Region.lienzo[point] = s.val
@@ -62,22 +63,19 @@ class Region():
     for i, j in [(-1,0),(1,0),(0,-1),(0,1)]:
       new = x+i, y+j
       if Region.isfree(new):
-        bisect.insort(s.border, (dist+1, new))
+        s.border.append((dist+1, new))
 
     #Img.print(Region.lienzo)
 
     #dintance
     s.size +=1
-    s.center = (s.center[0]+point[0], s.center[1]+point[1])
   
   def grow(s):
     checkedBorder = []
     hasGrown = False
     while s.border:
       # punto aleatorio en la frontera:
-      dist, candidate = s.border.pop(
-        int(Region.randomDistr(random.random()) * len(s.border))
-      )
+      dist, candidate = s.border.pop(0)
 
       if Region.isfree(candidate):
         
@@ -86,7 +84,7 @@ class Region():
           s.addPoint(dist, candidate)
           hasGrown = True
         else:
-          bisect.insort(checkedBorder, (dist, candidate))
+          checkedBorder.append((dist, candidate))
 
     # guardamos los puntos que no han pasado el threshold para cuando este suba:
     s.border = checkedBorder
@@ -95,7 +93,7 @@ class Region():
       Img.print(Region.lienzo)
   
 
-def regionGrower(image, nregions, mask, zeroPixels, threshold, thresholdGrowth, distanceFactor,stepsFolder,maxSeedTries, condition, randomDistr,isPrint):
+def regionGrower(image, nregions, mask, zeroPixels, threshold, seedThreshold, thresholdGrowth, distanceFactor,stepsFolder,maxSeedTries, condition, minSize, isPrint):
   xlen, ylen = image.shape
   lienzo = np.zeros((xlen, ylen)) # píxeles sin escoger
   Counter.start(xlen*ylen-zeroPixels)
@@ -106,7 +104,7 @@ def regionGrower(image, nregions, mask, zeroPixels, threshold, thresholdGrowth, 
   actualNRegions = 0
   prevCunterN = Counter.n # para la barra chula de progreso
   pixelsDict = {}
-  Region.staticInit(image, lienzo, pixelsDict, mask, threshold, distanceFactor,thresholdGrowth, condition, randomDistr, isPrint)
+  Region.staticInit(image, lienzo, pixelsDict, mask, threshold, seedThreshold, distanceFactor,thresholdGrowth, condition, minSize, isPrint)
 
   # grow until the end
   with alive_bar(Counter.n) as bar:
@@ -120,20 +118,20 @@ def regionGrower(image, nregions, mask, zeroPixels, threshold, thresholdGrowth, 
           while regionVal < nregions+1 or not (regions or closed):
             for _ in range(maxSeedTries):
               seed = int(random.random()*xlen), int(random.random()*ylen)
-              if Region.isfree(seed) and Region.image[seed] < Region.threshold:
+              if Region.isfree(seed) and Region.image[seed] < Region.seedThreshold:
                 r = Region(seed, regionVal)
-                regions.append(r)
                 r.grow()
+                bisect.insort(regions,r)
                 regionVal+=1
                 actualNRegions+=1
                 break
             else:
-              Region.threshold=Region.thresholdGrowth(Region.threshold)
+              Region.seedThreshold=Region.thresholdGrowth(Region.seedThreshold)
 
-      curr = regions.pop()
+      curr = regions.pop(0)
       curr.grow()
       if curr.border:
-        closed.append(curr)
+        bisect.insort(closed,curr)
 
       bar(prevCunterN-Counter.n)
       prevCunterN = Counter.n

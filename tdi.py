@@ -22,7 +22,7 @@ def calculateKerneSize(size, kernelSize):
   kernelSize = size // kernelSize
   return kernelSize+kernelSize%2+1 # tiene que ser impar
 
-def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, thresholdGrowth, distanceFactor, seeLevel, maxIslands, seeMedianSize, minEarthSize, maxSeedTries, condition, randomDistr, isPrint):
+def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, seedThreshold, thresholdGrowth, distanceFactor, seeLevel, maxIslands, seeMedianSize, minEarthSize, maxSeedTries, condition, minSize, isPrint):
   
   im = Img(os.path.join(testsFolder,name))
   imFinal = Img(os.path.join(finalFolder,name))
@@ -32,33 +32,23 @@ def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, t
   seePerlin = (perlinNoise(size, perlinSee)*256).astype("uint8")
   im.print(seePerlin, "perlinSee")
 
-  see = regionGrower(seePerlin, maxIslands, np.ones((size,size)), int(size*size*(1-minEarthSize)), seeLevel, thresholdGrowth, distanceFactor,stepsFolder,maxSeedTries, condition, randomDistr, isPrint)
+  see = regionGrower(seePerlin, maxIslands, np.ones((size,size)), int(size*size*(1-minEarthSize)),
+                     seeLevel, seeLevel, thresholdGrowth, distanceFactor,stepsFolder,maxSeedTries, condition, 0, isPrint)
   see = see.astype("bool").astype("uint8") # convertir a array "booleano"
   im.print(see, "boolsee")
 
-  seeMedianSize = calculateKerneSize(size, seeMedianSize)
-  # kernel = np.ones((seeMedianSize, seeMedianSize), np.uint8)
-  # radius = seeMedianSize//2
-  # for i in range(seeMedianSize):
-  #   for j in range(seeMedianSize):
-  #     if ((i-radius)**2+(j-radius)**2)**0.5 > radius:
-  #       kernel[i,j] = 0
-  # im.print(kernel, "kernel")
-
-  # see = cv2.erode(see, kernel, iterations=1)
-  # im.print(see, "seeErode")
-  see = cv2.medianBlur(see, seeMedianSize)
+  see = cv2.medianBlur(see, calculateKerneSize(size,seeMedianSize))
   im.print(see, "medianSee")
 
   zeroPixels = size*size - cv2.countNonZero(see) #refactorizar
-
 
 
   # regions
   arr = ((np.absolute(perlinNoise(size, perlinRegions) - 0.5) * (-1) + 0.5) * 256*2).astype("uint8")
   im.print(arr, "perlinNoise")
 
-  arr = regionGrower(arr, contryNumber, see, zeroPixels, threshold, thresholdGrowth, distanceFactor,stepsFolder,maxSeedTries, condition, randomDistr, isPrint)
+  arr = regionGrower(arr, contryNumber, see, zeroPixels, threshold, seedThreshold, thresholdGrowth,
+                     distanceFactor, stepsFolder, maxSeedTries, condition, minSize, isPrint)
   im.print(arr, "regionGrower")
 
   imFinal.print(arr, "")
@@ -83,16 +73,17 @@ if __name__ == "__main__":
       perlinRegions=[(6, 1), (10, 1), (20, 0.5),(100, 0.1)],
       perlinSee=[(2,10),(3,10),(10, 2), (20, 2), (40, 1), (100, 0.5)],
       #perlinSee=[(2, 2), (5,1), (20, 0.5), (100, 0.05)],
-      threshold=180,
-      thresholdGrowth = lambda x: x*1.01,
-      distanceFactor = lambda x: 2**(x*0.01),
+      threshold=230,
+      seedThreshold=20,
+      thresholdGrowth = lambda x: x+1,
+      distanceFactor = lambda x: 0,#10**(x*0.01)*0.1,
       condition = lambda candidate, distance, threshold: candidate + distance < threshold,
       seeLevel=10,
       maxIslands=4,
-      seeMedianSize=200, # dividir la imagen en este número de partes para calcular el tamaño de la mediana
+      seeMedianSize=150, # dividir la imagen en este número de partes para calcular el tamaño de la mediana
       minEarthSize=0.6, #si es muy bajo puede que no termine por no enconrar huecos libres para semillas
-      maxSeedTries=100,
-      randomDistr = lambda input: 0,
+      maxSeedTries=1000,
+      minSize = 0.01,
       isPrint = False)
   
   print("END")

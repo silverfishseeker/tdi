@@ -1,7 +1,7 @@
 ordenar por distancia
 
 
-
+No se pudo usar dilate porque crea huecos más fácilmente que median
     
 class Graph(set): # Undirected graph¡
   def add(s, a, b):
