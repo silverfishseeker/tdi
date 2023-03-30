@@ -15,18 +15,15 @@ class Counter(): #para tener referencia a un número
   def start(init):
     Counter.n = init
 
-
 class Region():
-  def staticInit(image, lienzo, pixelsDict, mask, threshold, seedThreshold,distanceFactor, thresholdGrowth, condition, minSize, isPrint):
+  def staticInit(image, lienzo, pixelsDict, mask, threshold, seedThreshold, thresholdGrowth, minSize, isPrint):
     Region.image = image
     Region.lienzo = lienzo # pixeles disponibles
     Region.pixelsDict = pixelsDict
     Region.mask = mask
     Region.threshold = threshold
     Region.seedThreshold = seedThreshold
-    Region.distanceFactor = distanceFactor
     Region.thresholdGrowth = thresholdGrowth
-    Region.condition = condition
     Region.minSize = int(lienzo.shape[0] * lienzo.shape[1] * minSize)
     print(minSize,Region.minSize)
     Region.isPrint = isPrint
@@ -45,7 +42,7 @@ class Region():
     s.seed = seed
     s.size = 0
     if Region.isfree(seed):
-      s.addPoint(0,seed)
+      s.addPoint(seed)
     else:
       raise ValueError("el seed no está disponible")
 
@@ -55,7 +52,7 @@ class Region():
     return s.size < other.size
   
   
-  def addPoint(s, dist, point):
+  def addPoint(s, point):
     Region.lienzo[point] = s.val
     Region.pixelsDict[s.val] = point
     Counter.n-=1
@@ -63,11 +60,9 @@ class Region():
     for i, j in [(-1,0),(1,0),(0,-1),(0,1)]:
       new = x+i, y+j
       if Region.isfree(new):
-        s.border.append((dist+1, new))
+        s.border.append(new)
 
     #Img.print(Region.lienzo)
-
-    #dintance
     s.size +=1
   
   def grow(s):
@@ -75,16 +70,16 @@ class Region():
     hasGrown = False
     while s.border:
       # punto aleatorio en la frontera:
-      dist, candidate = s.border.pop(0)
+      candidate = s.border.pop()
 
       if Region.isfree(candidate):
         
         #### NOS LA METEMOS O NO NOS LA METEMOS ####
-        if Region.condition(Region.image[candidate], Region.distanceFactor(dist), Region.threshold):
-          s.addPoint(dist, candidate)
+        if Region.image[candidate] < Region.threshold:
+          s.addPoint(candidate)
           hasGrown = True
         else:
-          checkedBorder.append((dist, candidate))
+          checkedBorder.append(candidate)
 
     # guardamos los puntos que no han pasado el threshold para cuando este suba:
     s.border = checkedBorder
@@ -93,7 +88,7 @@ class Region():
       Img.print(Region.lienzo)
   
 
-def regionGrower(image, nregions, mask, zeroPixels, threshold, seedThreshold, thresholdGrowth, distanceFactor,stepsFolder,maxSeedTries, condition, minSize, isPrint):
+def regionGrower(image, nregions, mask, zeroPixels, threshold, seedThreshold, thresholdGrowth, stepsFolder,maxSeedTries, minSize, isPrint):
   xlen, ylen = image.shape
   lienzo = np.zeros((xlen, ylen)) # píxeles sin escoger
   Counter.start(xlen*ylen-zeroPixels)
@@ -104,7 +99,7 @@ def regionGrower(image, nregions, mask, zeroPixels, threshold, seedThreshold, th
   actualNRegions = 0
   prevCunterN = Counter.n # para la barra chula de progreso
   pixelsDict = {}
-  Region.staticInit(image, lienzo, pixelsDict, mask, threshold, seedThreshold, distanceFactor,thresholdGrowth, condition, minSize, isPrint)
+  Region.staticInit(image, lienzo, pixelsDict, mask, threshold, seedThreshold, thresholdGrowth, minSize, isPrint)
 
   # grow until the end
   with alive_bar(Counter.n) as bar:

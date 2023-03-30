@@ -22,7 +22,7 @@ def calculateKerneSize(size, kernelSize):
   kernelSize = size // kernelSize
   return kernelSize+kernelSize%2+1 # tiene que ser impar
 
-def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, seedThreshold, thresholdGrowth, distanceFactor, seeLevel, maxIslands, seeMedianSize, minEarthSize, maxSeedTries, condition, minSize, isPrint):
+def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, seedThreshold, thresholdGrowth, seeLevel, maxIslands, seeMedianSize, minEarthSize, maxSeedTries, minSize, isPrint):
   
   im = Img(os.path.join(testsFolder,name))
   imFinal = Img(os.path.join(finalFolder,name))
@@ -33,7 +33,7 @@ def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, s
   im.print(seePerlin, "perlinSee")
 
   see = regionGrower(seePerlin, maxIslands, np.ones((size,size)), int(size*size*(1-minEarthSize)),
-                     seeLevel, seeLevel, thresholdGrowth, distanceFactor,stepsFolder,maxSeedTries, condition, 0, isPrint)
+                     seeLevel, seeLevel, thresholdGrowth, stepsFolder,maxSeedTries, 0, isPrint)
   see = see.astype("bool").astype("uint8") # convertir a array "booleano"
   im.print(see, "boolsee")
 
@@ -48,7 +48,7 @@ def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, s
   im.print(arr, "perlinNoise")
 
   arr = regionGrower(arr, contryNumber, see, zeroPixels, threshold, seedThreshold, thresholdGrowth,
-                     distanceFactor, stepsFolder, maxSeedTries, condition, minSize, isPrint)
+                     stepsFolder, maxSeedTries, minSize, isPrint)
   im.print(arr, "regionGrower")
 
   imFinal.print(arr, "")
@@ -69,15 +69,13 @@ if __name__ == "__main__":
   for i in range(100):
     generateMap(str(i),
       size=500,
-      contryNumber=20,
+      contryNumber=10,
       perlinRegions=[(6, 1), (10, 1), (20, 0.5),(100, 0.1)],
       perlinSee=[(2,10),(3,10),(10, 2), (20, 2), (40, 1), (100, 0.5)],
       #perlinSee=[(2, 2), (5,1), (20, 0.5), (100, 0.05)],
       threshold=230,
       seedThreshold=20,
       thresholdGrowth = lambda x: x+1,
-      distanceFactor = lambda x: 0,#10**(x*0.01)*0.1,
-      condition = lambda candidate, distance, threshold: candidate + distance < threshold,
       seeLevel=10,
       maxIslands=4,
       seeMedianSize=150, # dividir la imagen en este número de partes para calcular el tamaño de la mediana
