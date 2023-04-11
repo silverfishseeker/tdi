@@ -16,7 +16,7 @@ class Img():
     s.name = name
   def print(s,arr, subName):
     fileName = f'{s.name}_{s.n}{subName}.png'
-    image = cv2.resize(arr, dsize=(2000, 2000), interpolation=cv2.INTER_NEAREST)
+    image = cv2.resize(arr.astype("uint8"), dsize=(2000, 2000), interpolation=cv2.INTER_NEAREST)
     img.imsave(fileName, image)
     #cv2.imwrite(fileName, image)
     s.n+=1
@@ -56,27 +56,44 @@ def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, s
   
   
   # borders
+  # operador de Sobel
   # cv2.filter2D trunca los valores negativos a 0, por eso hace falta pasar la máscara en ambos sentidos
   # ddepth = -1, para que tengamos la misma depth que la original, sea lo que sea
   verticalBorder1 = (cv2.filter2D(arr,-1,
-    np.array([[-1, 0, 1],
-              [-2, 0, 2],
-              [-1, 0, 1]]))).astype("bool")
+    np.array([[ 0, 0, 0],
+              [-1, 0, 1],
+              [ 0, 0, 0]]))).astype("bool")
   verticalBorder2 = (cv2.filter2D(arr,-1,
-    np.array([[ 1, 0,-1],
-              [ 2, 0,-2],
-              [ 1, 0,-1]]))).astype("bool")
+    np.array([[ 0, 0, 0],
+              [ 1, 0,-1],
+              [ 0, 0, 0]]))).astype("bool")
   horizontalBorder1 = cv2.filter2D(arr,-1,
-    np.array([[-1,-2,-1],
+    np.array([[ 0,-1, 0],
               [ 0, 0, 0],
-              [ 1, 2, 1]])).astype("bool")
+              [ 0, 1, 0]])).astype("bool")
   horizontalBorder2 = cv2.filter2D(arr,-1,
-    np.array([[ 1, 2, 1],
+    np.array([[ 0, 1, 0],
               [ 0, 0, 0],
-              [-1,-2,-1]])).astype("bool")
+              [ 0,-1, 0]])).astype("bool")
   borders = (~(verticalBorder1 | verticalBorder2 | horizontalBorder1 | horizontalBorder2)).astype("uint8")
   im.print(borders, "borders")
+
+  im.print(cv2.Sobel(arr, ddepth=cv2.CV_64F, dx=1, dy=1, ksize=3), "Sobel")
+  im.print(cv2.Canny(arr, threshold1=100, threshold2=200), "Canny")
   
+  other = cv2.filter2D(arr,-1,
+    np.array([[-1,-1,-1],
+              [-1, 8,-1],
+              [-1,-1,-1]])).astype("bool")
+  im.print(other, "other")
+
+  sharp = cv2.filter2D(arr,-1,
+    np.array([[ 0,-1, 0],
+              [-1, 4,-1],
+              [ 0,-1, 0]])).astype("bool")
+  im.print(sharp, "sharp")
+
+
   arr = arr * borders
   im.print(arr, "borderedMap")
 
