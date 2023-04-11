@@ -94,7 +94,7 @@ class Region():
 
 def regionGrower(image, nregions, mask, zeroPixels, threshold, seedThreshold, thresholdGrowth, stepsFolder,maxSeedTries, minSize, isPrint):
   xlen, ylen = image.shape
-  lienzo = np.zeros((xlen, ylen), dtype="i8") # píxeles sin escoger
+  lienzo = np.zeros((xlen, ylen), dtype="uint8") # píxeles sin escoger
   Counter.start(xlen*ylen-zeroPixels)
   Img.stepsFolder = stepsFolder
   regions = []

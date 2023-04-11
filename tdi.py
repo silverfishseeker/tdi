@@ -15,7 +15,10 @@ class Img():
     s.n=0
     s.name = name
   def print(s,arr, subName):
-    img.imsave(f'{s.name}_{s.n}{subName}.png', cv2.resize(arr, dsize=(2000, 2000), interpolation=cv2.INTER_NEAREST))
+    fileName = f'{s.name}_{s.n}{subName}.png'
+    image = cv2.resize(arr.astype("uint8"), dsize=(2000, 2000), interpolation=cv2.INTER_NEAREST)
+    img.imsave(fileName, image)
+    #cv2.imwrite(fileName, image)
     s.n+=1
 
 def calculateKerneSize(size, kernelSize):
@@ -50,7 +53,53 @@ def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, s
   arr = regionGrower(arr, contryNumber, see, zeroPixels, threshold, seedThreshold, thresholdGrowth,
                      stepsFolder, maxSeedTries, minSize, isPrint)
   im.print(arr, "regionGrower")
+  
+  
+  # borders
+  # cv2.filter2D trunca los valores negativos a 0, por eso hace falta pasar la máscara en ambos sentidos
+  # ddepth = -1, para que tengamos la misma depth que la original, sea lo que sea
+  verticalBorder1 = (cv2.filter2D(arr,-1,
+    np.array([[-1, 0, 1],
+              [-2, 0, 2],
+              [-1, 0, 1]]))).astype("bool")
+  verticalBorder2 = (cv2.filter2D(arr,-1,
+    np.array([[ 1, 0,-1],
+              [ 2, 0,-2],
+              [ 1, 0,-1]]))).astype("bool")
+  horizontalBorder1 = cv2.filter2D(arr,-1,
+    np.array([[-1,-2,-1],
+              [ 0, 0, 0],
+              [ 1, 2, 1]])).astype("bool")
+  horizontalBorder2 = cv2.filter2D(arr,-1,
+    np.array([[ 1, 2, 1],
+              [ 0, 0, 0],
+              [-1,-2,-1]])).astype("bool")
+  borders = verticalBorder1 | verticalBorder2 | horizontalBorder1 | horizontalBorder2
+  im.print(borders, "borders")
 
+  digonalBorder1 = (cv2.filter2D(arr,-1,
+    np.array([[-2,-1, 0],
+              [-1, 0, 1],
+              [ 0, 1, 2]]))).astype("bool")
+  digonalBorder2 = (cv2.filter2D(arr,-1,
+    np.array([[ 0,-1,-2],
+              [ 1, 0,-1],
+              [ 2, 1, 0]]))).astype("bool")
+  digonalBorder3 = cv2.filter2D(arr,-1,
+    np.array([[ 2, 1, 0],
+              [ 1, 0,-1],
+              [ 0,-1,-2]])).astype("bool")
+  digonalBorder4 = cv2.filter2D(arr,-1,
+    np.array([[ 0, 1, 2],
+              [-1, 0, 1],
+              [-2,-1, 0]])).astype("bool")
+  digonalBorder = digonalBorder1 | digonalBorder2 | digonalBorder3 | digonalBorder4
+
+  print(np.array_equal(borders, digonalBorder))
+  im.print(digonalBorder, "digonalBorder")
+  borders = borders | digonalBorder
+  im.print(borders, "plusBorders")
+  
   imFinal.print(arr, "")
   print(name,"terminado")
   print()

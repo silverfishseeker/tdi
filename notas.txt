@@ -6,4 +6,5 @@
 
 
 No se pudo usar dilate porque crea huecos más fácilmente que median
-    
+se probó con borders diagonales, pero no aportan nada (son casi equivalentes con respecto a si son distintas de 0).
+Para sumar los distintos bordes se usa OR o hay overflow
