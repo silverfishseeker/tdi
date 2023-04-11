@@ -45,6 +45,7 @@ class Region():
     s.seed = seed
     s.size = 0
     s.addPoint(seed)
+    Region.graph.addVert(s.val)
 
   def __lt__(s, other):
     if not type(other) is Region:
@@ -93,7 +94,7 @@ class Region():
 
 def regionGrower(image, nregions, mask, zeroPixels, threshold, seedThreshold, thresholdGrowth, stepsFolder,maxSeedTries, minSize, isPrint):
   xlen, ylen = image.shape
-  lienzo = np.zeros((xlen, ylen)) # píxeles sin escoger
+  lienzo = np.zeros((xlen, ylen), dtype="i8") # píxeles sin escoger
   Counter.start(xlen*ylen-zeroPixels)
   Img.stepsFolder = stepsFolder
   regions = []
@@ -134,5 +135,12 @@ def regionGrower(image, nregions, mask, zeroPixels, threshold, seedThreshold, th
       bar(prevCunterN-Counter.n)
       prevCunterN = Counter.n
       #print(Counter.n, cv2.countNonZero(freespace), sum(x.size for x in discarded), threshold)
-    
-  return (lienzo * 256 / (actualNRegions+1)).astype("uint8"), Region.graph
+  
+  recolor, maxColor = Region.graph.colorMap()
+  recolor[0] = 0
+  with np.nditer(lienzo, op_flags=['readwrite']) as it:
+    for i in it:
+      i[...] = recolor[i[()]]
+      # i es un ndarray de 0 dimensiones, por eso se asigna y se lee de forma tan rara
+
+  return (lienzo * 256 / (maxColor+1)).astype("uint8")

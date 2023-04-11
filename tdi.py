@@ -32,7 +32,7 @@ def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, s
   seePerlin = (perlinNoise(size, perlinSee)*256).astype("uint8")
   im.print(seePerlin, "perlinSee")
 
-  see, _ = regionGrower(seePerlin, maxIslands, np.ones((size,size)), int(size*size*(1-minEarthSize)),
+  see = regionGrower(seePerlin, maxIslands, np.ones((size,size)), int(size*size*(1-minEarthSize)),
                      seeLevel, seeLevel, thresholdGrowth, stepsFolder,maxSeedTries, 0, isPrint)
   see = see.astype("bool").astype("uint8") # convertir a array "booleano"
   im.print(see, "boolsee")
@@ -47,10 +47,9 @@ def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, s
   arr = ((np.absolute(perlinNoise(size, perlinRegions) - 0.5) * (-1) + 0.5) * 256*2).astype("uint8")
   im.print(arr, "perlinNoise")
 
-  arr, graph = regionGrower(arr, contryNumber, see, zeroPixels, threshold, seedThreshold, thresholdGrowth,
+  arr = regionGrower(arr, contryNumber, see, zeroPixels, threshold, seedThreshold, thresholdGrowth,
                      stepsFolder, maxSeedTries, minSize, isPrint)
   im.print(arr, "regionGrower")
-  print(graph)
 
   imFinal.print(arr, "")
   print(name,"terminado")
@@ -67,11 +66,12 @@ if __name__ == "__main__":
   prepareFolder(testsFolder)
   prepareFolder(finalFolder)
 
-  for i in range(1):
+  for i in range(10):
     generateMap(str(i),
       size=500,
-      contryNumber=4,
+      contryNumber=20,
       perlinRegions=[(6, 1), (10, 1), (20, 0.5),(100, 0.1)],
+      #perlinRegions=[(6, 1), (10, 0.5), (20, 1), (40, 1),(100, 0.1)],
       perlinSee=[(2,10),(3,10),(10, 2), (20, 2), (40, 1), (100, 0.5)],
       #perlinSee=[(2, 2), (5,1), (20, 0.5), (100, 0.05)],
       threshold=230,
@@ -81,7 +81,7 @@ if __name__ == "__main__":
       maxIslands=4,
       seeMedianSize=150, # dividir la imagen en este número de partes para calcular el tamaño de la mediana
       minEarthSize=0.6, #si es muy bajo puede que no termine por no enconrar huecos libres para semillas
-      maxSeedTries=1000,
+      maxSeedTries=10000,
       minSize = 0.01,
       isPrint = False)
   
