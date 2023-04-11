@@ -1,6 +1,7 @@
-import random, numpy as np
-import matplotlib.image as img, cv2
-import bisect
+import random, cv2, bisect
+import numpy as np
+import matplotlib.image as img
+from Graph import NotSelfGraph
 from alive_progress import alive_bar
 
 class Img():
@@ -28,23 +29,22 @@ class Region():
     print(minSize,Region.minSize)
     Region.isPrint = isPrint
 
+    Region.graph = NotSelfGraph()
+
+  def isInIndex(point):
+    return point[0]>=0 and point[1]>=0 and \
+      point[0] < Region.lienzo.shape[0] and \
+      point[1] < Region.lienzo.shape[1] and Region.mask[point]
+
   def isfree(point):
-    if point[0]<0 or point[1]<0: # indeces negativos son válidos en python
-      return False
-    try:
-      return Region.mask[point] and Region.lienzo[point] == 0
-    except IndexError:
-      return False
+    return Region.isInIndex(point) and Region.lienzo[point] == 0
 
   def __init__(s, seed, value):
     s.val = value # identificador
     s.border = []
     s.seed = seed
     s.size = 0
-    if Region.isfree(seed):
-      s.addPoint(seed)
-    else:
-      raise ValueError("el seed no está disponible")
+    s.addPoint(seed)
 
   def __lt__(s, other):
     if not type(other) is Region:
@@ -59,8 +59,11 @@ class Region():
     x, y = point
     for i, j in [(-1,0),(1,0),(0,-1),(0,1)]:
       new = x+i, y+j
-      if Region.isfree(new):
-        s.border.append(new)
+      if Region.isInIndex(new):
+        if Region.lienzo[new] == 0:
+          s.border.append(new)
+        else:
+          Region.graph.add(s.val,int(Region.lienzo[new]))
 
     #Img.print(Region.lienzo)
     s.size +=1
@@ -132,4 +135,4 @@ def regionGrower(image, nregions, mask, zeroPixels, threshold, seedThreshold, th
       prevCunterN = Counter.n
       #print(Counter.n, cv2.countNonZero(freespace), sum(x.size for x in discarded), threshold)
     
-  return (lienzo * 256 / (actualNRegions+1)).astype("uint8")
+  return (lienzo * 256 / (actualNRegions+1)).astype("uint8"), Region.graph

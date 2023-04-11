@@ -1,18 +1,9 @@
-ordenar por distancia
+4. Detectar los bordes entre los mismos para remarcarlos con negro. Lo normal es que ya los pueda sacar como subproducto del paso anterior, pero también podría probar con algún algoritmo de detección de bordes 
+
+5. Encontrar el centro de cada región que es dónde iría la etiqueta del nombe. Tal vez una media o mejor algo como la intersección entre las diagonales mayor o menor, hay que pensarlo
+
+
 
 
 No se pudo usar dilate porque crea huecos más fácilmente que median
     
-class Graph(set): # Undirected graph¡
-  def add(s, a, b):
-    set.add(s,(a,b))
-
-  def __contains__(s, key):
-    a,b = key
-    return set.__contains__(s,(a,b)) or set.__contains__(s,(b,a))
-
-  def remove(s, a, b):
-    try:
-      return set.remove(s,(b,a))
-    except KeyError:
-      return set.remove(s,(a,b)) # si no está ninguno lanzamos KeyError
