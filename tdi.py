@@ -1,9 +1,6 @@
-import os, shutil, numpy as np
-import matplotlib.image as img
-import cv2 # pip install opencv-python
+import os, shutil, numpy as np, matplotlib.image, cv2 # pip install opencv-python
 from regionGrower import regionGrower
 from perlinNice import perlinNoise
-#from decimal import * # me ha pasado un poco con el tamaño de los numbers
 
 testsFolder = "tests"
 stepsFolder = "steps"
@@ -17,15 +14,12 @@ class Img():
   def print(s,arr, subName):
     fileName = f'{s.name}_{s.n}{subName}.png'
     image = cv2.resize(arr.astype("uint8"), dsize=(2000, 2000), interpolation=cv2.INTER_NEAREST)
-    img.imsave(fileName, image)
+    # cmaps= tab20b, tab20c, twilight
+    matplotlib.image.imsave(fileName, image, cmap="tab20c")
     #cv2.imwrite(fileName, image)
     s.n+=1
 
-def calculateKerneSize(size, kernelSize):
-  kernelSize = size // kernelSize
-  return kernelSize+kernelSize%2+1 # tiene que ser impar
-
-def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, seedThreshold, thresholdGrowth, seeLevel, maxIslands, seeMedianSize, minEarthSize, maxSeedTries, minSize, isPrint):
+def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, seedThreshold, thresholdGrowth, seeLevel, maxIslands, seeMedianSize, minEarthSize, maxSeedTries, minSize, seeColor, isPrint):
   
   im = Img(os.path.join(testsFolder,name))
   imFinal = Img(os.path.join(finalFolder,name))
@@ -35,12 +29,15 @@ def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, s
   seePerlin = (perlinNoise(size, perlinSee)*256).astype("uint8")
   im.print(seePerlin, "perlinSee")
 
-  see = regionGrower(seePerlin, maxIslands, np.ones((size,size)), int(size*size*(1-minEarthSize)),
+  see, _ = regionGrower(seePerlin, maxIslands, np.ones((size,size)), int(size*size*(1-minEarthSize)),
                      seeLevel, seeLevel, thresholdGrowth, stepsFolder,maxSeedTries, 0, isPrint)
   see = see.astype("bool").astype("uint8") # convertir a array "booleano"
   im.print(see, "boolsee")
 
-  see = cv2.medianBlur(see, calculateKerneSize(size,seeMedianSize))
+
+  kernelSize = size // seeMedianSize
+  kernelSize = kernelSize+kernelSize%2+1 # tiene que ser impar
+  see = cv2.medianBlur(see, kernelSize)
   im.print(see, "medianSee")
 
   zeroPixels = size*size - cv2.countNonZero(see) #refactorizar
@@ -50,8 +47,9 @@ def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, s
   arr = ((np.absolute(perlinNoise(size, perlinRegions) - 0.5) * (-1) + 0.5) * 256*2).astype("uint8")
   im.print(arr, "perlinNoise")
 
-  arr = regionGrower(arr, contryNumber, see, zeroPixels, threshold, seedThreshold, thresholdGrowth,
+  arr, maxColor = regionGrower(arr, contryNumber, see, zeroPixels, threshold, seedThreshold, thresholdGrowth,
                      stepsFolder, maxSeedTries, minSize, isPrint)
+  arr = arr * ((255-seeColor)/maxColor)+seeColor
   im.print(arr, "regionGrower")
   
   
@@ -61,38 +59,22 @@ def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, s
   # ddepth = -1, para que tengamos la misma depth que la original, sea lo que sea
   verticalBorder1 = (cv2.filter2D(arr,-1,
     np.array([[ 0, 0, 0],
-              [-1, 0, 1],
+              [-1, 1, 0],
               [ 0, 0, 0]]))).astype("bool")
   verticalBorder2 = (cv2.filter2D(arr,-1,
     np.array([[ 0, 0, 0],
-              [ 1, 0,-1],
+              [ 1,-1, 0],
               [ 0, 0, 0]]))).astype("bool")
   horizontalBorder1 = cv2.filter2D(arr,-1,
     np.array([[ 0,-1, 0],
-              [ 0, 0, 0],
-              [ 0, 1, 0]])).astype("bool")
+              [ 0, 1, 0],
+              [ 0, 0, 0]])).astype("bool")
   horizontalBorder2 = cv2.filter2D(arr,-1,
     np.array([[ 0, 1, 0],
-              [ 0, 0, 0],
-              [ 0,-1, 0]])).astype("bool")
+              [ 0,-1, 0],
+              [ 0, 0, 0]])).astype("bool")
   borders = (~(verticalBorder1 | verticalBorder2 | horizontalBorder1 | horizontalBorder2)).astype("uint8")
   im.print(borders, "borders")
-
-  im.print(cv2.Sobel(arr, ddepth=cv2.CV_64F, dx=1, dy=1, ksize=3), "Sobel")
-  im.print(cv2.Canny(arr, threshold1=100, threshold2=200), "Canny")
-  
-  other = cv2.filter2D(arr,-1,
-    np.array([[-1,-1,-1],
-              [-1, 8,-1],
-              [-1,-1,-1]])).astype("bool")
-  im.print(other, "other")
-
-  sharp = cv2.filter2D(arr,-1,
-    np.array([[ 0,-1, 0],
-              [-1, 4,-1],
-              [ 0,-1, 0]])).astype("bool")
-  im.print(sharp, "sharp")
-
 
   arr = arr * borders
   im.print(arr, "borderedMap")
@@ -112,14 +94,14 @@ if __name__ == "__main__":
   prepareFolder(testsFolder)
   prepareFolder(finalFolder)
 
-  for i in range(10):
+  for i in range(100):
     generateMap(str(i),
-      size=500,
+      size=800,
       contryNumber=20,
       perlinRegions=[(6, 1), (10, 1), (20, 0.5),(100, 0.1)],
       #perlinRegions=[(6, 1), (10, 0.5), (20, 1), (40, 1),(100, 0.1)],
-      perlinSee=[(2,10),(3,10),(10, 2), (20, 2), (40, 1), (100, 0.5)],
-      #perlinSee=[(2, 2), (5,1), (20, 0.5), (100, 0.05)],
+      #perlinSee=[(2,10),(3,10),(10, 2), (20, 2), (40, 1), (100, 0.5)],
+      perlinSee=[(2, 2), (5,1), (20, 0.5), (100, 0.05)],
       threshold=230,
       seedThreshold=20,
       thresholdGrowth = lambda x: x+1,
@@ -129,6 +111,7 @@ if __name__ == "__main__":
       minEarthSize=0.6, #si es muy bajo puede que no termine por no enconrar huecos libres para semillas
       maxSeedTries=10000,
       minSize = 0.01,
+      seeColor = 20,
       isPrint = False)
   
   print("END")

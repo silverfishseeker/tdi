@@ -143,4 +143,4 @@ def regionGrower(image, nregions, mask, zeroPixels, threshold, seedThreshold, th
       i[...] = recolor[i[()]]
       # i es un ndarray de 0 dimensiones, por eso se asigna y se lee de forma tan rara
 
-  return (lienzo * 256 / (maxColor+1)).astype("uint8")
+  return lienzo.astype("uint8"), maxColor
