@@ -14,6 +14,7 @@ class Img():
   def print(s,arr, subName):
     fileName = f'{s.name}_{s.n}{subName}.png'
     image = cv2.resize(arr.astype("uint8"), dsize=(2000, 2000), interpolation=cv2.INTER_NEAREST)
+    # https://matplotlib.org/stable/tutorials/colors/colormaps.html
     # cmaps= tab20b, tab20c, twilight
     matplotlib.image.imsave(fileName, image, cmap="tab20c")
     #cv2.imwrite(fileName, image)
