@@ -17,7 +17,7 @@ class Counter(): #para tener referencia a un número
     Counter.n = init
 
 class Region():
-  def staticInit(image, lienzo, pixelsDict, mask, threshold, seedThreshold, thresholdGrowth, minSize, isPrint):
+  def staticInit(image, lienzo, pixelsDict, mask, threshold, seedThreshold, thresholdGrowth, isPrint):
     Region.image = image
     Region.lienzo = lienzo # pixeles disponibles
     Region.pixelsDict = pixelsDict
@@ -25,8 +25,6 @@ class Region():
     Region.threshold = threshold
     Region.seedThreshold = seedThreshold
     Region.thresholdGrowth = thresholdGrowth
-    Region.minSize = int(lienzo.shape[0] * lienzo.shape[1] * minSize)
-    print(minSize,Region.minSize)
     Region.isPrint = isPrint
 
     Region.graph = NotSelfGraph()
@@ -92,7 +90,7 @@ class Region():
       Img.print(Region.lienzo)
   
 
-def regionGrower(image, nregions, mask, zeroPixels, threshold, seedThreshold, thresholdGrowth, stepsFolder,maxSeedTries, minSize, isPrint):
+def regionGrower(image, nregions, mask, zeroPixels, threshold, seedThreshold, thresholdGrowth, stepsFolder,maxSeedTries, isPrint):
   xlen, ylen = image.shape
   lienzo = np.zeros((xlen, ylen), dtype="uint8") # píxeles sin escoger
   Counter.start(xlen*ylen-zeroPixels)
@@ -103,7 +101,7 @@ def regionGrower(image, nregions, mask, zeroPixels, threshold, seedThreshold, th
   actualNRegions = 0
   prevCunterN = Counter.n # para la barra chula de progreso
   pixelsDict = {}
-  Region.staticInit(image, lienzo, pixelsDict, mask, threshold, seedThreshold, thresholdGrowth, minSize, isPrint)
+  Region.staticInit(image, lienzo, pixelsDict, mask, threshold, seedThreshold, thresholdGrowth, isPrint)
 
   # grow until the end
   with alive_bar(Counter.n) as bar:

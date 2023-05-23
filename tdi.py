@@ -20,7 +20,7 @@ class Img():
     #cv2.imwrite(fileName, image)
     s.n+=1
 
-def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, seedThreshold, thresholdGrowth, seeLevel, maxIslands, seeMedianSize, minEarthSize, maxSeedTries, minSize, seeColor, isPrint):
+def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, seedThreshold, thresholdGrowth, seeLevel, maxIslands, seeMedianSize, minEarthSize, maxSeedTries, seeColor, isPrint):
   
   im = Img(os.path.join(testsFolder,name))
   imFinal = Img(os.path.join(finalFolder,name))
@@ -31,7 +31,7 @@ def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, s
   im.print(seePerlin, "perlinSee")
 
   see, _ = regionGrower(seePerlin, maxIslands, np.ones((size,size)), int(size*size*(1-minEarthSize)),
-                     seeLevel, seeLevel, thresholdGrowth, stepsFolder,maxSeedTries, 0, isPrint)
+                     seeLevel, seeLevel, thresholdGrowth, stepsFolder, maxSeedTries, isPrint)
   see = see.astype("bool").astype("uint8") # convertir a array "booleano"
   im.print(see, "boolsee")
 
@@ -49,7 +49,7 @@ def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, s
   im.print(arr, "perlinNoise")
 
   arr, maxColor = regionGrower(arr, contryNumber, see, zeroPixels, threshold, seedThreshold, thresholdGrowth,
-                     stepsFolder, maxSeedTries, minSize, isPrint)
+                     stepsFolder, maxSeedTries, isPrint)
   arr = arr * ((255-seeColor)/maxColor)+seeColor
   im.print(arr, "regionGrower")
   
@@ -111,7 +111,6 @@ if __name__ == "__main__":
       seeMedianSize=150, # dividir la imagen en este número de partes para calcular el tamaño de la mediana
       minEarthSize=0.6, #si es muy bajo puede que no termine por no enconrar huecos libres para semillas
       maxSeedTries=10000,
-      minSize = 0.01,
       seeColor = 20,
       isPrint = False)
   
