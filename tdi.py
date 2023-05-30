@@ -41,13 +41,13 @@ def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, s
   see = cv2.medianBlur(see, kernelSize)
   im.print(see, "medianSee")
 
-  zeroPixels = size*size - cv2.countNonZero(see) #refactorizar
 
 
   # regions
   arr = ((np.absolute(perlinNoise(size, perlinRegions) - 0.5) * (-1) + 0.5) * 256*2).astype("uint8")
   im.print(arr, "perlinNoise")
 
+  zeroPixels = size*size - cv2.countNonZero(see)
   arr, maxColor = regionGrower(arr, contryNumber, see, zeroPixels, threshold, seedThreshold, thresholdGrowth,
                      stepsFolder, maxSeedTries, isPrint)
   arr = arr * ((255-seeColor)/maxColor)+seeColor
@@ -55,7 +55,6 @@ def generateMap(name, size, contryNumber, perlinRegions, perlinSee, threshold, s
   
   
   # borders
-  # operador de Sobel
   # cv2.filter2D trunca los valores negativos a 0, por eso hace falta pasar la máscara en ambos sentidos
   # ddepth = -1, para que tengamos la misma depth que la original, sea lo que sea
   verticalBorder1 = (cv2.filter2D(arr,-1,
